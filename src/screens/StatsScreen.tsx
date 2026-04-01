@@ -9,6 +9,7 @@ import {
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
 import { MOOD_OPTIONS } from '../constants/moods';
+import { MoodChart } from '../components/MoodChart';
 import { MoodType } from '../types';
 import dayjs from 'dayjs';
 
@@ -74,6 +75,9 @@ export const StatsScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* 7天心情趋势折线图 */}
+      <MoodChart entries={entries} />
 
       {/* 总览卡片 */}
       <View style={styles.summaryCard}>

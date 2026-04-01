@@ -1,30 +1,56 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ActivityIndicator,
   Text,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
-import { Colors, MoodColors } from '../constants/colors';
-import { getMoodByType } from '../constants/moods';
+import { Colors } from '../constants/colors';
 import { darkMapStyle } from '../constants/mapStyles';
 import { MoodMarker } from '../components/MoodMarker';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { MapStylePicker } from '../components/MapStylePicker';
+import { WelcomeOverlay } from '../components/WelcomeOverlay';
 import { Entry, MapStyleType, MoodType } from '../types';
+import AsyncStorage from '../utils/storage';
 
 export const MapScreen: React.FC = () => {
   const { location, loading, error } = useLocation();
   const { entries } = useEntries();
+  const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('standard');
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // 首次启动检测
+  useEffect(() => {
+    try {
+      const hasLaunched = AsyncStorage.getItem('hasLaunched');
+      if (!hasLaunched) {
+        setShowWelcome(true);
+      }
+    } catch {
+      // 静默失败
+    }
+  }, []);
+
+  const handleWelcomeClose = () => {
+    setShowWelcome(false);
+    try {
+      AsyncStorage.setItem('hasLaunched', 'true');
+    } catch {
+      // 静默失败
+    }
+  };
 
   const handleAddPress = useCallback(() => {
     setShowNewEntry(true);
@@ -83,6 +109,7 @@ export const MapScreen: React.FC = () => {
         }}
         showsUserLocation
         showsMyLocationButton={false}
+        showsCompass={false}
         mapType={mapStyle === 'satellite' ? 'satellite' : 'standard'}
         customMapStyle={mapStyle === 'dark' ? darkMapStyle : undefined}
       >
@@ -100,21 +127,48 @@ export const MapScreen: React.FC = () => {
         ))}
       </MapView>
 
+      {/* 顶部状态栏背景渐变 */}
+      <View style={[styles.statusBarOverlay, { height: insets.top + 10 }]} />
+
+      {/* 顶部标题 */}
+      <View style={[styles.titleContainer, { top: insets.top + 12 }]}>
+        <View style={styles.titlePill}>
+          <Text style={styles.titleText}>MapJournal</Text>
+          {entries.length > 0 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countText}>{entries.length}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* 地图风格切换按钮 */}
-      <MapStylePicker
-        currentStyle={mapStyle}
-        onStyleChange={setMapStyle}
-      />
+      <View style={{ position: 'absolute', top: insets.top + 56, right: 16 }}>
+        <MapStylePicker
+          currentStyle={mapStyle}
+          onStyleChange={setMapStyle}
+        />
+      </View>
 
       {/* 重新定位按钮 */}
-      <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}>
+      <TouchableOpacity
+        style={[styles.recenterButton, { bottom: 110 }]}
+        onPress={handleRecenter}
+      >
         <Text style={styles.recenterIcon}>📍</Text>
       </TouchableOpacity>
 
       {/* 添加心情按钮 */}
-      <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
+      <TouchableOpacity
+        style={[styles.addButton, { bottom: 40 }]}
+        onPress={handleAddPress}
+        activeOpacity={0.85}
+      >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
+
+      {/* 欢迎弹窗 */}
+      {showWelcome && <WelcomeOverlay onGetStarted={handleWelcomeClose} />}
 
       {/* 新建心情面板 */}
       <NewEntrySheet
@@ -167,32 +221,73 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  statusBarOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(248, 249, 254, 0.85)',
+  },
+  titleContainer: {
+    position: 'absolute',
+    left: 16,
+  },
+  titlePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  titleText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  countBadge: {
+    marginLeft: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  countText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   addButton: {
     position: 'absolute',
-    bottom: 30,
     alignSelf: 'center',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
   addButtonText: {
-    fontSize: 32,
+    fontSize: 34,
     color: '#FFFFFF',
     fontWeight: '300',
     marginTop: -2,
   },
   recenterButton: {
     position: 'absolute',
-    bottom: 30,
-    right: 20,
+    right: 16,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -201,8 +296,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
     elevation: 4,
   },
   recenterIcon: {

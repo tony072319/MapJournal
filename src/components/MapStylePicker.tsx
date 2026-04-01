@@ -56,9 +56,7 @@ export const MapStylePicker: React.FC<Props> = ({ currentStyle, onStyleChange })
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 60,
-    right: 16,
+    alignItems: 'flex-end',
   },
   button: {
     width: 44,
