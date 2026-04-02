@@ -4,13 +4,16 @@ import {
   SectionList,
   StyleSheet,
   Text,
+  Image,
+  TouchableOpacity,
   RefreshControl,
 } from 'react-native';
 import { useEntries } from '../context/EntriesContext';
-import { TimelineCard } from '../components/TimelineCard';
 import { EntryDetail } from '../components/EntryDetail';
 import { MoodFilter } from '../components/MoodFilter';
-import { Colors } from '../constants/colors';
+import { Colors, MoodColors } from '../constants/colors';
+import { getMoodByType } from '../constants/moods';
+import { formatRelative, formatShortDate } from '../utils/dateFormat';
 import { Entry, MoodType } from '../types';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
@@ -19,12 +22,11 @@ import isYesterday from 'dayjs/plugin/isYesterday';
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 
-// 格式化日期分组标题
 const formatSectionTitle = (dateStr: string): string => {
   const date = dayjs(dateStr);
   if (date.isToday()) return '今天';
   if (date.isYesterday()) return '昨天';
-  if (date.isAfter(dayjs().subtract(7, 'day'))) return date.format('dddd'); // 星期X
+  if (date.isAfter(dayjs().subtract(7, 'day'))) return date.format('dddd');
   if (date.year() === dayjs().year()) return date.format('M月D日');
   return date.format('YYYY年M月D日');
 };
@@ -34,6 +36,45 @@ interface Section {
   data: Entry[];
   count: number;
 }
+
+// 内联的时间线卡片 — 更紧凑的设计
+const TimelineItem = ({ entry, onPress }: { entry: Entry; onPress: () => void }) => {
+  const mood = getMoodByType(entry.mood);
+  const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
+
+  return (
+    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
+      {/* 左侧时间线 */}
+      <View style={styles.itemTimeline}>
+        <View style={[styles.itemDot, { backgroundColor: moodColor }]} />
+        <View style={styles.itemLine} />
+      </View>
+
+      {/* 右侧内容卡片 */}
+      <View style={styles.itemCard}>
+        <View style={styles.itemHeader}>
+          <View style={styles.itemHeaderLeft}>
+            <Text style={styles.itemEmoji}>{entry.emoji}</Text>
+            <Text style={[styles.itemMood, { color: moodColor }]}>{mood.label}</Text>
+          </View>
+          <Text style={styles.itemTime}>{formatRelative(entry.createdAt)}</Text>
+        </View>
+
+        {entry.note ? (
+          <Text style={styles.itemNote} numberOfLines={3}>{entry.note}</Text>
+        ) : null}
+
+        {entry.photoUri ? (
+          <Image source={{ uri: entry.photoUri }} style={styles.itemPhoto} />
+        ) : null}
+
+        {entry.address ? (
+          <Text style={styles.itemAddress} numberOfLines={1}>{entry.address}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export const TimelineScreen: React.FC = () => {
   const { entries, refreshEntries } = useEntries();
@@ -47,7 +88,6 @@ export const TimelineScreen: React.FC = () => {
     );
   };
 
-  // 按日期分组（带心情筛选）
   const sections: Section[] = useMemo(() => {
     let filtered = entries;
     if (moodFilters.length > 0) {
@@ -81,10 +121,14 @@ export const TimelineScreen: React.FC = () => {
   if (entries.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>📝</Text>
+        <View style={styles.emptyIcon}>
+          <View style={[styles.emptyBar, { backgroundColor: MoodColors.happy, height: 32 }]} />
+          <View style={[styles.emptyBar, { backgroundColor: MoodColors.good, height: 48 }]} />
+          <View style={[styles.emptyBar, { backgroundColor: Colors.primary, height: 40 }]} />
+        </View>
         <Text style={styles.emptyTitle}>还没有心情记录</Text>
         <Text style={styles.emptyHint}>
-          去地图页面点击 "+" 按钮{'\n'}记录你的第一条心情吧
+          {'去地图页面点击 "+" 按钮\n记录你的第一条心情吧'}
         </Text>
       </View>
     );
@@ -103,14 +147,14 @@ export const TimelineScreen: React.FC = () => {
           />
         }
         renderItem={({ item }) => (
-          <TimelineCard entry={item} onPress={() => setSelectedEntry(item)} />
+          <TimelineItem entry={item} onPress={() => setSelectedEntry(item)} />
         )}
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
+            <View style={styles.sectionDot} />
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionBadge}>
-              <Text style={styles.sectionCount}>{section.count}</Text>
-            </View>
+            <View style={styles.sectionLine} />
+            <Text style={styles.sectionCount}>{section.count}</Text>
           </View>
         )}
         contentContainerStyle={styles.list}
@@ -139,34 +183,112 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
     paddingBottom: 32,
   },
+  // 时间线条目
+  item: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  itemTimeline: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  itemDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 16,
+  },
+  itemLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: Colors.border,
+    marginTop: 4,
+  },
+  itemCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 8,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  itemHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemEmoji: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  itemMood: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  itemTime: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  itemNote: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 21,
+    marginBottom: 6,
+  },
+  itemPhoto: {
+    width: '100%',
+    height: 140,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  itemAddress: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  // 日期分组头
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: 12,
     marginTop: 8,
-    marginBottom: 4,
+  },
+  sectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginRight: 10,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: Colors.text,
   },
-  sectionBadge: {
-    marginLeft: 8,
-    backgroundColor: Colors.primary + '18',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: 10,
   },
   sectionCount: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.textSecondary,
   },
+  // 空状态
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -174,20 +296,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 40,
   },
-  emptyEmoji: {
-    fontSize: 56,
-    marginBottom: 20,
+  emptyIcon: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 24,
+  },
+  emptyBar: {
+    width: 16,
+    borderRadius: 8,
+    marginHorizontal: 3,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   emptyHint: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
 });

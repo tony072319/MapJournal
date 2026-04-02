@@ -1,23 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Colors, MoodColors } from '../constants/colors';
-import { Entry, MoodType } from '../types';
+import { Entry } from '../types';
 import dayjs from 'dayjs';
 
-const CHART_HEIGHT = 140;
-const DOT_SIZE = 32;
+const CHART_HEIGHT = 120;
+const DOT_SIZE = 30;
 
 interface Props {
   entries: Entry[];
 }
 
-// 心情类型对应数值
 const moodToValue: Record<string, number> = {
-  happy: 5,
-  good: 4,
-  neutral: 3,
-  sad: 2,
-  angry: 1,
+  happy: 5, good: 4, neutral: 3, sad: 2, angry: 1,
 };
 
 const getColorForValue = (val: number): string => {
@@ -37,12 +32,10 @@ const getEmojiForValue = (val: number): string => {
 };
 
 export const MoodChart: React.FC<Props> = ({ entries }) => {
-  // 生成最近7天
   const days = Array.from({ length: 7 }, (_, i) =>
     dayjs().subtract(6 - i, 'day')
   );
 
-  // 每天的平均心情值
   const dailyData = days.map((day) => {
     const dayEntries = entries.filter((e) =>
       dayjs(e.createdAt).isSame(day, 'day')
@@ -57,47 +50,56 @@ export const MoodChart: React.FC<Props> = ({ entries }) => {
 
   const hasData = dailyData.some((v) => v !== null);
 
-  // 将值转为从底部的像素偏移
   const valueToPixels = (val: number): number => {
     return ((val - 1) / 4) * (CHART_HEIGHT - DOT_SIZE);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>最近7天心情趋势</Text>
-
-      <View style={styles.chartRow}>
-        {dailyData.map((val, i) => (
-          <View key={i} style={styles.column}>
-            {/* 数据柱/点 */}
-            <View style={styles.barArea}>
-              {val !== null ? (
-                <View
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor: getColorForValue(val),
-                      marginBottom: valueToPixels(val),
-                    },
-                  ]}
-                >
-                  <Text style={styles.dotEmoji}>{getEmojiForValue(val)}</Text>
-                </View>
-              ) : (
-                <View style={styles.emptyDot}>
-                  <Text style={styles.emptyDash}>-</Text>
-                </View>
-              )}
-            </View>
-            {/* 日期标签 */}
-            <Text style={styles.dayLabel}>{days[i].format('dd')}</Text>
-          </View>
-        ))}
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>最近7天</Text>
+        {!hasData && <Text style={styles.noData}>暂无数据</Text>}
       </View>
 
-      {!hasData && (
-        <Text style={styles.noDataText}>最近7天还没有记录</Text>
-      )}
+      <View style={styles.chartRow}>
+        {dailyData.map((val, i) => {
+          const isToday = i === 6;
+          return (
+            <View key={i} style={styles.column}>
+              <View style={styles.barArea}>
+                {val !== null ? (
+                  <>
+                    {/* 连接柱 */}
+                    <View
+                      style={[
+                        styles.barStem,
+                        {
+                          height: valueToPixels(val),
+                          backgroundColor: getColorForValue(val) + '25',
+                        },
+                      ]}
+                    />
+                    {/* 数据点 */}
+                    <View
+                      style={[
+                        styles.dot,
+                        { backgroundColor: getColorForValue(val) },
+                      ]}
+                    >
+                      <Text style={styles.dotEmoji}>{getEmojiForValue(val)}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.emptyDot} />
+                )}
+              </View>
+              <Text style={[styles.dayLabel, isToday ? styles.dayLabelToday : undefined]}>
+                {isToday ? '今' : days[i].format('dd')}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 };
@@ -106,7 +108,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     marginBottom: 16,
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
@@ -114,17 +116,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 16,
+  },
+  noData: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
   chartRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   column: {
     alignItems: 'center',
@@ -135,6 +146,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
+  barStem: {
+    width: 8,
+    borderRadius: 4,
+    marginBottom: -2,
+  },
   dot: {
     width: DOT_SIZE,
     height: DOT_SIZE,
@@ -143,36 +159,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
   },
   dotEmoji: {
-    fontSize: 16,
+    fontSize: 15,
   },
   emptyDot: {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.4,
-  },
-  emptyDash: {
-    fontSize: 14,
-    color: Colors.textSecondary,
   },
   dayLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: '500',
     marginTop: 8,
   },
-  noDataText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 8,
+  dayLabelToday: {
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });

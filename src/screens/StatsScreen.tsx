@@ -19,7 +19,6 @@ export const StatsScreen: React.FC = () => {
   const { entries } = useEntries();
   const [period, setPeriod] = useState<Period>('week');
 
-  // 根据选择的时段筛选记录
   const filteredEntries = useMemo(() => {
     if (period === 'all') return entries;
     const now = dayjs();
@@ -27,7 +26,6 @@ export const StatsScreen: React.FC = () => {
     return entries.filter((e) => dayjs(e.createdAt).isAfter(start));
   }, [entries, period]);
 
-  // 心情分布统计
   const moodCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     MOOD_OPTIONS.forEach((m) => (counts[m.type] = 0));
@@ -40,14 +38,12 @@ export const StatsScreen: React.FC = () => {
   const totalCount = filteredEntries.length;
   const maxCount = Math.max(...Object.values(moodCounts), 1);
 
-  // 最常出现的心情
   const topMood = useMemo(() => {
     if (totalCount === 0) return null;
     const sorted = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
     return MOOD_OPTIONS.find((m) => m.type === sorted[0][0]) || null;
   }, [moodCounts, totalCount]);
 
-  // 连续记录天数
   const streakDays = useMemo(() => {
     if (entries.length === 0) return 0;
     const dates = [...new Set(entries.map((e) => dayjs(e.createdAt).format('YYYY-MM-DD')))].sort().reverse();
@@ -58,19 +54,15 @@ export const StatsScreen: React.FC = () => {
       if (diff <= 1) {
         streak++;
         current = dayjs(dateStr);
-      } else {
-        break;
-      }
+      } else break;
     }
     return streak;
   }, [entries]);
 
-  // 不同记录天数
   const uniqueDays = useMemo(() => {
     return new Set(entries.map((e) => dayjs(e.createdAt).format('YYYY-MM-DD'))).size;
   }, [entries]);
 
-  // 照片数
   const photoCount = useMemo(() => {
     return entries.filter((e) => e.photoUri).length;
   }, [entries]);
@@ -78,7 +70,11 @@ export const StatsScreen: React.FC = () => {
   if (entries.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>📊</Text>
+        <View style={styles.emptyCircles}>
+          {[MoodColors.happy, MoodColors.good, Colors.primary].map((c, i) => (
+            <View key={i} style={[styles.emptyCircle, { backgroundColor: c, opacity: 0.7 - i * 0.15 }]} />
+          ))}
+        </View>
         <Text style={styles.emptyTitle}>还没有统计数据</Text>
         <Text style={styles.emptyHint}>记录更多心情后，这里会展示你的心情趋势</Text>
       </View>
@@ -86,17 +82,21 @@ export const StatsScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       {/* 时段选择器 */}
       <View style={styles.periodSelector}>
         {(['week', 'month', 'all'] as Period[]).map((p) => (
           <TouchableOpacity
             key={p}
-            style={[styles.periodButton, period === p && styles.periodButtonActive]}
+            style={[styles.periodButton, period === p ? styles.periodButtonActive : undefined]}
             onPress={() => setPeriod(p)}
           >
             <Text
-              style={[styles.periodText, period === p && styles.periodTextActive]}
+              style={[styles.periodText, period === p ? styles.periodTextActive : undefined]}
             >
               {p === 'week' ? '本周' : p === 'month' ? '本月' : '全部'}
             </Text>
@@ -104,28 +104,60 @@ export const StatsScreen: React.FC = () => {
         ))}
       </View>
 
-      {/* 7天心情趋势折线图 */}
-      <MoodChart entries={entries} />
-
-      {/* 总览卡片 */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryNumber}>{totalCount}</Text>
-        <Text style={styles.summaryLabel}>条心情记录</Text>
-        {topMood && (
-          <View style={styles.topMoodRow}>
-            <Text style={styles.topMoodLabel}>最常出现的心情</Text>
-            <Text style={styles.topMoodEmoji}>{topMood.emoji}</Text>
-            <Text style={styles.topMoodName}>{topMood.label}</Text>
-          </View>
-        )}
+      {/* 总览数据行 */}
+      <View style={styles.overviewRow}>
+        <OverviewCard
+          value={totalCount.toString()}
+          label="总记录"
+          color={Colors.primary}
+        />
+        <OverviewCard
+          value={streakDays.toString()}
+          label="连续天数"
+          color={MoodColors.happy}
+        />
+        <OverviewCard
+          value={uniqueDays.toString()}
+          label="活跃天"
+          color={MoodColors.good}
+        />
+        <OverviewCard
+          value={photoCount.toString()}
+          label="照片"
+          color={MoodColors.neutral}
+        />
       </View>
 
-      {/* 心情分布柱状图 */}
+      {/* 最常见心情 */}
+      {topMood && (
+        <View style={styles.topMoodCard}>
+          <Text style={styles.topMoodLabel}>这段时间你最常感到</Text>
+          <View style={styles.topMoodContent}>
+            <View style={[styles.topMoodCircle, { backgroundColor: MoodColors[topMood.type as MoodType] + '18' }]}>
+              <Text style={styles.topMoodEmoji}>{topMood.emoji}</Text>
+            </View>
+            <View>
+              <Text style={[styles.topMoodName, { color: MoodColors[topMood.type as MoodType] }]}>
+                {topMood.label}
+              </Text>
+              <Text style={styles.topMoodCount}>
+                {moodCounts[topMood.type]} 次 ({totalCount > 0 ? Math.round((moodCounts[topMood.type] / totalCount) * 100) : 0}%)
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 7天趋势 */}
+      <MoodChart entries={entries} />
+
+      {/* 心情分布 */}
       <View style={styles.chartCard}>
         <Text style={styles.chartTitle}>心情分布</Text>
         {MOOD_OPTIONS.map((mood) => {
           const count = moodCounts[mood.type] || 0;
-          const widthPercent = totalCount > 0 ? Math.max((count / maxCount) * 100, 3) : 0;
+          const pct = totalCount > 0 ? (count / maxCount) * 100 : 0;
+          const displayPct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
           return (
             <View key={mood.type} style={styles.barRow}>
               <Text style={styles.barEmoji}>{mood.emoji}</Text>
@@ -134,41 +166,31 @@ export const StatsScreen: React.FC = () => {
                   style={[
                     styles.barFill,
                     {
-                      width: `${widthPercent}%`,
+                      width: `${Math.max(pct, count > 0 ? 5 : 0)}%`,
                       backgroundColor: MoodColors[mood.type as MoodType],
                     },
                   ]}
                 />
               </View>
               <Text style={styles.barCount}>
-                {count}{totalCount > 0 ? ` (${Math.round((count / totalCount) * 100)}%)` : ''}
+                {count > 0 ? `${displayPct}%` : '-'}
               </Text>
             </View>
           );
         })}
       </View>
-
-      {/* 连续记录天数 & 有趣统计 */}
-      <View style={styles.insightsRow}>
-        <View style={styles.insightCard}>
-          <Text style={styles.insightEmoji}>🔥</Text>
-          <Text style={styles.insightNumber}>{streakDays}</Text>
-          <Text style={styles.insightLabel}>连续记录</Text>
-        </View>
-        <View style={styles.insightCard}>
-          <Text style={styles.insightEmoji}>📅</Text>
-          <Text style={styles.insightNumber}>{uniqueDays}</Text>
-          <Text style={styles.insightLabel}>记录天数</Text>
-        </View>
-        <View style={styles.insightCard}>
-          <Text style={styles.insightEmoji}>📸</Text>
-          <Text style={styles.insightNumber}>{photoCount}</Text>
-          <Text style={styles.insightLabel}>照片数</Text>
-        </View>
-      </View>
     </ScrollView>
   );
 };
+
+// 小概览卡片组件
+const OverviewCard = ({ value, label, color }: { value: string; label: string; color: string }) => (
+  <View style={styles.overviewCard}>
+    <View style={[styles.overviewDot, { backgroundColor: color }]} />
+    <Text style={styles.overviewValue}>{value}</Text>
+    <Text style={styles.overviewLabel}>{label}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -179,6 +201,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  // 空状态
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -186,13 +209,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 40,
   },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+  emptyCircles: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  emptyCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginHorizontal: 4,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text,
     marginBottom: 8,
   },
@@ -202,21 +231,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
+  // 时段选择
   periodSelector: {
     flexDirection: 'row',
     backgroundColor: Colors.card,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
     marginBottom: 16,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   periodButton: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 11,
   },
   periodButtonActive: {
     backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   periodText: {
     fontSize: 14,
@@ -226,11 +266,47 @@ const styles = StyleSheet.create({
   periodTextActive: {
     color: '#FFFFFF',
   },
-  summaryCard: {
+  // 总览行
+  overviewRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  overviewCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 12,
+    marginHorizontal: 3,
+    alignItems: 'center',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  overviewDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 8,
+  },
+  overviewValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  overviewLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  // 最常见心情
+  topMoodCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
+    padding: 18,
     marginBottom: 16,
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
@@ -238,42 +314,40 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  summaryNumber: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  summaryLabel: {
-    fontSize: 14,
+  topMoodLabel: {
+    fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 4,
+    marginBottom: 12,
   },
-  topMoodRow: {
+  topMoodContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
-  topMoodLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginRight: 8,
+  topMoodCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   topMoodEmoji: {
-    fontSize: 24,
-    marginRight: 4,
+    fontSize: 26,
   },
   topMoodName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700',
   },
+  topMoodCount: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  // 心情分布
   chartCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     shadowColor: Colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -281,69 +355,37 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   barRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   barEmoji: {
-    fontSize: 24,
-    width: 36,
+    fontSize: 22,
+    width: 32,
   },
   barTrack: {
     flex: 1,
-    height: 24,
+    height: 20,
     backgroundColor: Colors.background,
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
     marginHorizontal: 8,
   },
   barFill: {
     height: '100%',
-    borderRadius: 12,
+    borderRadius: 10,
   },
   barCount: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: Colors.text,
-    width: 52,
-    textAlign: 'right',
-  },
-  insightsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-  insightCard: {
-    flex: 1,
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  insightEmoji: {
-    fontSize: 24,
-    marginBottom: 6,
-  },
-  insightNumber: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.text,
-  },
-  insightLabel: {
-    fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 2,
-    fontWeight: '500',
+    width: 36,
+    textAlign: 'right',
   },
 });
