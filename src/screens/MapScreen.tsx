@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
@@ -23,7 +22,6 @@ import AsyncStorage from '../utils/storage';
 export const MapScreen: React.FC = () => {
   const { location, loading, error } = useLocation();
   const { entries } = useEntries();
-  const insets = useSafeAreaInsets();
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -83,7 +81,7 @@ export const MapScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* 头部 */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={styles.header}>
         <Text style={styles.title}>MapJournal</Text>
         <View style={styles.headerRight}>
           <Text style={styles.coords}>
