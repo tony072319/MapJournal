@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
@@ -40,9 +41,7 @@ export const MapScreen: React.FC = () => {
   useEffect(() => {
     try {
       const hasLaunched = AsyncStorage.getItem('hasLaunched');
-      if (!hasLaunched) {
-        setShowWelcome(true);
-      }
+      if (!hasLaunched) setShowWelcome(true);
     } catch {}
   }, []);
 
@@ -50,14 +49,6 @@ export const MapScreen: React.FC = () => {
     setShowWelcome(false);
     try { AsyncStorage.setItem('hasLaunched', 'true'); } catch {}
   };
-
-  const handleAddPress = useCallback(() => {
-    setShowNewEntry(true);
-  }, []);
-
-  const handleEntryPress = useCallback((entry: Entry) => {
-    setSelectedEntry(entry);
-  }, []);
 
   if (loading) {
     return (
@@ -71,9 +62,8 @@ export const MapScreen: React.FC = () => {
   if (error || !location) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorEmoji}>📍</Text>
-        <Text style={styles.errorText}>{error || '无法获取位置'}</Text>
-        <Text style={styles.errorHint}>请在设置中允许App访问位置信息</Text>
+        <Text style={styles.errorTitle}>需要位置权限</Text>
+        <Text style={styles.errorHint}>请在设置中允许 MapJournal 访问位置信息</Text>
       </View>
     );
   }
@@ -82,17 +72,17 @@ export const MapScreen: React.FC = () => {
     <View style={styles.container}>
       {/* 头部 */}
       <View style={styles.header}>
-        <Text style={styles.title}>MapJournal</Text>
-        <View style={styles.headerRight}>
-          <Text style={styles.coords}>
-            📍 {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-          </Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>MapJournal</Text>
           {entries.length > 0 && (
             <View style={styles.countBadge}>
-              <Text style={styles.countText}>{entries.length}</Text>
+              <Text style={styles.countText}>{entries.length} 条记录</Text>
             </View>
           )}
         </View>
+        <Text style={styles.location}>
+          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+        </Text>
       </View>
 
       {/* 心情筛选 */}
@@ -106,57 +96,71 @@ export const MapScreen: React.FC = () => {
         </View>
       )}
 
-      {/* 内容区 */}
+      {/* 内容 */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 空状态 */}
         {entries.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🗺️</Text>
-            <Text style={styles.emptyTitle}>你的心情地图</Text>
+            <View style={styles.emptyIconRow}>
+              {['😄', '😊', '😐', '😢', '😠'].map((e, i) => (
+                <View key={i} style={styles.emptyEmojiDot}>
+                  <Text style={styles.emptyEmojiText}>{e}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.emptyTitle}>记录你的心情</Text>
             <Text style={styles.emptyHint}>
-              点击下方 "+" 按钮{'\n'}记录你的第一条心情
+              {'点击下方 "+" 按钮\n开始你的第一条心情记录'}
             </Text>
           </View>
         )}
 
-        {/* 筛选后无结果 */}
         {filteredEntries.length === 0 && entries.length > 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🔍</Text>
-            <Text style={styles.emptyHint}>没有匹配的心情记录</Text>
+            <Text style={styles.emptyTitle}>没有匹配的记录</Text>
+            <Text style={styles.emptyHint}>试试取消筛选条件</Text>
           </View>
         )}
 
-        {/* 心情卡片列表 */}
         {filteredEntries.map((entry) => {
           const mood = getMoodByType(entry.mood);
           const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
           return (
             <TouchableOpacity
               key={entry.id}
-              style={[styles.card, { borderLeftColor: moodColor }]}
-              onPress={() => handleEntryPress(entry)}
+              style={styles.card}
+              onPress={() => setSelectedEntry(entry)}
               activeOpacity={0.7}
             >
-              <View style={styles.cardRow}>
-                <View style={[styles.emojiCircle, { backgroundColor: moodColor + '15', borderColor: moodColor }]}>
-                  <Text style={styles.cardEmoji}>{entry.emoji}</Text>
+              {/* 顶部心情色条 */}
+              <View style={[styles.cardColorBar, { backgroundColor: moodColor }]} />
+
+              <View style={styles.cardBody}>
+                <View style={styles.cardRow}>
+                  <View style={[styles.emojiCircle, { backgroundColor: moodColor + '12' }]}>
+                    <Text style={styles.cardEmoji}>{entry.emoji}</Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <View style={styles.cardTopRow}>
+                      <Text style={[styles.cardMood, { color: moodColor }]}>{mood.label}</Text>
+                      <Text style={styles.cardTime}>{formatRelative(entry.createdAt)}</Text>
+                    </View>
+                    {entry.note ? (
+                      <Text style={styles.cardNote} numberOfLines={2}>{entry.note}</Text>
+                    ) : null}
+                    {entry.address ? (
+                      <Text style={styles.cardAddress} numberOfLines={1}>{entry.address}</Text>
+                    ) : null}
+                  </View>
                 </View>
-                <View style={styles.cardContent}>
-                  <Text style={[styles.cardMood, { color: moodColor }]}>{mood.label}</Text>
-                  {entry.note && (
-                    <Text style={styles.cardNote} numberOfLines={1}>{entry.note}</Text>
-                  )}
-                  <Text style={styles.cardMeta}>
-                    {formatRelative(entry.createdAt)}
-                    {entry.address ? ` · ${entry.address}` : ''}
-                  </Text>
-                </View>
-                {entry.photoUri && <Text style={styles.photoIcon}>📷</Text>}
+
+                {/* 照片预览 */}
+                {entry.photoUri ? (
+                  <Image source={{ uri: entry.photoUri }} style={styles.cardPhoto} />
+                ) : null}
               </View>
             </TouchableOpacity>
           );
@@ -165,11 +169,9 @@ export const MapScreen: React.FC = () => {
 
       {/* "+" 按钮 */}
       <TouchableOpacity
-        style={[styles.addButton, { bottom: 30 }]}
-        onPress={handleAddPress}
+        style={styles.addButton}
+        onPress={() => setShowNewEntry(true)}
         activeOpacity={0.85}
-        accessibilityLabel="记录新心情"
-        accessibilityRole="button"
       >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
@@ -197,43 +199,42 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 12,
     backgroundColor: Colors.card,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  headerRight: {
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  coords: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.5,
   },
   countBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 22,
-    alignItems: 'center',
+    backgroundColor: Colors.primary + '12',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   countText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.primary,
+  },
+  location: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
   filterRow: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: Colors.background,
   },
   scroll: {
     flex: 1,
@@ -242,75 +243,111 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
+  // 空状态
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: 60,
   },
-  emptyEmoji: {
-    fontSize: 56,
-    marginBottom: 16,
+  emptyIconRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  emptyEmojiDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  emptyEmojiText: {
+    fontSize: 20,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 8,
   },
   emptyHint: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
+  // 卡片
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-    borderLeftWidth: 4,
+    borderRadius: 16,
+    marginBottom: 12,
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardColorBar: {
+    height: 3,
+  },
+  cardBody: {
+    padding: 14,
   },
   cardRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   emojiCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   cardEmoji: {
-    fontSize: 22,
+    fontSize: 24,
   },
   cardContent: {
     flex: 1,
   },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   cardMood: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 2,
   },
-  cardNote: {
-    fontSize: 13,
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  cardMeta: {
-    fontSize: 11,
+  cardTime: {
+    fontSize: 12,
     color: Colors.textSecondary,
   },
-  photoIcon: {
-    fontSize: 16,
-    marginLeft: 8,
+  cardNote: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
+    marginBottom: 4,
   },
+  cardAddress: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  cardPhoto: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  // 加载/错误
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -320,42 +357,39 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.textSecondary,
   },
-  errorEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  errorText: {
+  errorTitle: {
     fontSize: 18,
     color: Colors.text,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: '700',
+    marginBottom: 8,
   },
   errorHint: {
-    marginTop: 8,
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  // + 按钮
   addButton: {
     position: 'absolute',
+    bottom: 20,
     alignSelf: 'center',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 10,
   },
   addButtonText: {
-    fontSize: 34,
+    fontSize: 32,
     color: '#FFFFFF',
     fontWeight: '300',
     marginTop: -2,

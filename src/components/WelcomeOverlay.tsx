@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { Colors } from '../constants/colors';
+import { Colors, MoodColors } from '../constants/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -18,41 +18,35 @@ export const WelcomeOverlay: React.FC<Props> = ({ onGetStarted }) => {
   return (
     <View style={styles.overlay}>
       <View style={styles.card}>
-        {/* 顶部装饰 */}
-        <View style={styles.emojiRow}>
-          <Text style={styles.decorEmoji}>😄</Text>
-          <Text style={styles.decorEmoji}>😊</Text>
-          <Text style={styles.decorEmoji}>📍</Text>
-          <Text style={styles.decorEmoji}>📸</Text>
-          <Text style={styles.decorEmoji}>✨</Text>
+        {/* 彩色圆点装饰 */}
+        <View style={styles.dotsRow}>
+          {[MoodColors.happy, MoodColors.good, Colors.primary, MoodColors.sad, MoodColors.angry].map(
+            (color, i) => (
+              <View key={i} style={[styles.decorDot, { backgroundColor: color }]} />
+            )
+          )}
         </View>
 
-        <Text style={styles.title}>欢迎来到 MapJournal</Text>
+        <Text style={styles.title}>MapJournal</Text>
         <Text style={styles.subtitle}>用地图记录你的每一个心情时刻</Text>
 
         {/* 功能介绍 */}
         <View style={styles.features}>
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>🗺️</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>心情地图</Text>
-              <Text style={styles.featureDesc}>在地图上留下你的心情足迹</Text>
-            </View>
-          </View>
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>📷</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>拍照记录</Text>
-              <Text style={styles.featureDesc}>用照片定格当下的美好瞬间</Text>
-            </View>
-          </View>
-          <View style={styles.featureRow}>
-            <Text style={styles.featureIcon}>📊</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>心情统计</Text>
-              <Text style={styles.featureDesc}>回顾你的心情变化趋势</Text>
-            </View>
-          </View>
+          <FeatureRow
+            color={MoodColors.good}
+            title="心情记录"
+            desc="随时随地记录你的心情和想法"
+          />
+          <FeatureRow
+            color={Colors.primary}
+            title="拍照留念"
+            desc="用照片定格当下的美好瞬间"
+          />
+          <FeatureRow
+            color={MoodColors.happy}
+            title="心情统计"
+            desc="回顾你的心情变化趋势"
+          />
         </View>
 
         <TouchableOpacity style={styles.button} onPress={onGetStarted} activeOpacity={0.8}>
@@ -65,10 +59,24 @@ export const WelcomeOverlay: React.FC<Props> = ({ onGetStarted }) => {
   );
 };
 
+const FeatureRow = ({ color, title, desc }: { color: string; title: string; desc: string }) => (
+  <View style={styles.featureRow}>
+    <View style={[styles.featureDot, { backgroundColor: color }]} />
+    <View style={styles.featureTextContainer}>
+      <Text style={styles.featureTitle}>{title}</Text>
+      <Text style={styles.featureDesc}>{desc}</Text>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
@@ -76,7 +84,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 28,
+    borderRadius: 24,
     padding: 32,
     width: width - 48,
     alignItems: 'center',
@@ -86,19 +94,22 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 20,
   },
-  emojiRow: {
+  dotsRow: {
     flexDirection: 'row',
-    gap: 12,
     marginBottom: 24,
   },
-  decorEmoji: {
-    fontSize: 28,
+  decorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: Colors.text,
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
@@ -108,25 +119,25 @@ const styles = StyleSheet.create({
   },
   features: {
     width: '100%',
-    gap: 16,
     marginBottom: 28,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    marginBottom: 16,
   },
-  featureIcon: {
-    fontSize: 28,
-    width: 40,
-    textAlign: 'center',
+  featureDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    marginRight: 14,
   },
   featureTextContainer: {
     flex: 1,
   },
   featureTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text,
     marginBottom: 2,
   },

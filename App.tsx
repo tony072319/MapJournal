@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
 import { EntriesProvider } from './src/context/EntriesContext';
 import { Colors } from './src/constants/colors';
 import { MapScreen } from './src/screens/MapScreen';
 import { TimelineScreen } from './src/screens/TimelineScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 
-// 简易Tab导航（不依赖 react-navigation，避免 react-native-screens Fabric 问题）
 type TabName = 'map' | 'timeline' | 'stats';
 
 const TABS: { key: TabName; label: string; icon: string }[] = [
@@ -32,6 +38,7 @@ function TabBar({
             key={tab.key}
             style={tabStyles.tab}
             onPress={() => onTabPress(tab.key)}
+            activeOpacity={0.7}
           >
             <View
               style={[
@@ -78,10 +85,9 @@ export default function App() {
           {activeTab === 'stats' && <StatsScreen />}
         </View>
 
-        {/* Custom tab bar */}
+        {/* Tab bar */}
         <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
-
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </SafeAreaView>
     </EntriesProvider>
   );
@@ -90,17 +96,19 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.card,
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 4,
+    paddingBottom: 12,
     backgroundColor: Colors.background,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '800',
     color: Colors.text,
+    letterSpacing: -0.5,
   },
   content: {
     flex: 1,
@@ -111,35 +119,37 @@ const tabStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: Colors.card,
-    borderTopWidth: 0.5,
+    borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingTop: 8,
-    paddingBottom: 28,
+    paddingBottom: Platform.OS === 'ios' ? 4 : 10,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 4,
   },
   iconWrap: {
-    width: 36,
-    height: 28,
-    borderRadius: 14,
+    width: 48,
+    height: 30,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 2,
   },
   iconWrapActive: {
-    backgroundColor: '#6C63FF22',
+    backgroundColor: Colors.primary + '18',
   },
   icon: {
-    fontSize: 20,
+    fontSize: 18,
   },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: Colors.textSecondary,
-    marginTop: 2,
   },
   labelActive: {
     color: Colors.primary,
+    fontWeight: '700',
   },
 });
