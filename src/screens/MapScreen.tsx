@@ -18,6 +18,7 @@ import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { MapStylePicker } from '../components/MapStylePicker';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
+import { MoodFilter } from '../components/MoodFilter';
 import { Entry, MapStyleType, MoodType } from '../types';
 import AsyncStorage from '../utils/storage';
 
@@ -30,6 +31,18 @@ export const MapScreen: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('standard');
   const [showWelcome, setShowWelcome] = useState(false);
+  const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
+
+  // 根据筛选过滤标记
+  const filteredEntries = moodFilters.length === 0
+    ? entries
+    : entries.filter((e) => moodFilters.includes(e.mood as MoodType));
+
+  const handleToggleMoodFilter = useCallback((mood: MoodType) => {
+    setMoodFilters((prev) =>
+      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
+    );
+  }, []);
 
   // 首次启动检测
   useEffect(() => {
@@ -113,7 +126,7 @@ export const MapScreen: React.FC = () => {
         mapType={mapStyle === 'satellite' ? 'satellite' : 'standard'}
         customMapStyle={mapStyle === 'dark' ? darkMapStyle : undefined}
       >
-        {entries.map((entry) => (
+        {filteredEntries.map((entry) => (
           <Marker
             key={entry.id}
             coordinate={{
@@ -142,8 +155,19 @@ export const MapScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* 心情筛选器 */}
+      {entries.length > 0 && (
+        <View style={[styles.filterContainer, { top: insets.top + 56 }]}>
+          <MoodFilter
+            activeFilters={moodFilters}
+            onToggle={handleToggleMoodFilter}
+            onClear={() => setMoodFilters([])}
+          />
+        </View>
+      )}
+
       {/* 地图风格切换按钮 */}
-      <View style={{ position: 'absolute', top: insets.top + 56, right: 16 }}>
+      <View style={{ position: 'absolute', top: insets.top + (entries.length > 0 ? 104 : 56), right: 16 }}>
         <MapStylePicker
           currentStyle={mapStyle}
           onStyleChange={setMapStyle}
@@ -154,6 +178,8 @@ export const MapScreen: React.FC = () => {
       <TouchableOpacity
         style={[styles.recenterButton, { bottom: 110 }]}
         onPress={handleRecenter}
+        accessibilityLabel="回到当前位置"
+        accessibilityRole="button"
       >
         <Text style={styles.recenterIcon}>📍</Text>
       </TouchableOpacity>
@@ -163,6 +189,8 @@ export const MapScreen: React.FC = () => {
         style={[styles.addButton, { bottom: 40 }]}
         onPress={handleAddPress}
         activeOpacity={0.85}
+        accessibilityLabel="记录新心情"
+        accessibilityRole="button"
       >
         <Text style={styles.addButtonText}>+</Text>
       </TouchableOpacity>
@@ -192,6 +220,12 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  filterContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
   },
   center: {
     flex: 1,

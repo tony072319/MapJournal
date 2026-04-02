@@ -9,8 +9,9 @@ import {
 import { useEntries } from '../context/EntriesContext';
 import { TimelineCard } from '../components/TimelineCard';
 import { EntryDetail } from '../components/EntryDetail';
+import { MoodFilter } from '../components/MoodFilter';
 import { Colors } from '../constants/colors';
-import { Entry } from '../types';
+import { Entry, MoodType } from '../types';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
@@ -38,10 +39,22 @@ export const TimelineScreen: React.FC = () => {
   const { entries, refreshEntries } = useEntries();
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
 
-  // 按日期分组
+  const handleToggleMoodFilter = (mood: MoodType) => {
+    setMoodFilters((prev) =>
+      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
+    );
+  };
+
+  // 按日期分组（带心情筛选）
   const sections: Section[] = useMemo(() => {
-    const sorted = [...entries].sort(
+    let filtered = entries;
+    if (moodFilters.length > 0) {
+      filtered = entries.filter((e) => moodFilters.includes(e.mood as MoodType));
+    }
+
+    const sorted = [...filtered].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
@@ -57,7 +70,7 @@ export const TimelineScreen: React.FC = () => {
       data,
       count: data.length,
     }));
-  }, [entries]);
+  }, [entries, moodFilters]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -82,6 +95,13 @@ export const TimelineScreen: React.FC = () => {
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <MoodFilter
+            activeFilters={moodFilters}
+            onToggle={handleToggleMoodFilter}
+            onClear={() => setMoodFilters([])}
+          />
+        }
         renderItem={({ item }) => (
           <TimelineCard entry={item} onPress={() => setSelectedEntry(item)} />
         )}

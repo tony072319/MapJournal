@@ -1,8 +1,15 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Animated,
+  Pressable,
+} from 'react-native';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
-import { formatRelative, formatShortDate } from '../utils/dateFormat';
+import { formatRelative } from '../utils/dateFormat';
 import { Entry, MoodType } from '../types';
 
 interface Props {
@@ -13,43 +20,77 @@ interface Props {
 export const TimelineCard: React.FC<Props> = ({ entry, onPress }) => {
   const mood = getMoodByType(entry.mood);
   const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      friction: 8,
+      tension: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 200,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.row}>
-        {/* 心情emoji */}
-        <View style={[styles.emojiCircle, { borderColor: moodColor }]}>
-          <Text style={styles.emoji}>{entry.emoji}</Text>
-        </View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      accessibilityLabel={`${mood.label}心情记录，${formatRelative(entry.createdAt)}`}
+      accessibilityRole="button"
+    >
+      <Animated.View
+        style={[styles.card, { transform: [{ scale: scaleAnim }] }]}
+      >
+        {/* 左侧心情色条 */}
+        <View style={[styles.colorStripe, { backgroundColor: moodColor }]} />
 
-        {/* 内容 */}
-        <View style={styles.content}>
-          <View style={styles.topRow}>
-            <Text style={[styles.moodLabel, { color: moodColor }]}>
-              {mood.label}
-            </Text>
-            <Text style={styles.time}>{formatRelative(entry.createdAt)}</Text>
+        <View style={styles.cardContent}>
+          <View style={styles.row}>
+            {/* 心情emoji */}
+            <View style={[styles.emojiCircle, { borderColor: moodColor, backgroundColor: moodColor + '10' }]}>
+              <Text style={styles.emoji}>{entry.emoji}</Text>
+            </View>
+
+            {/* 内容 */}
+            <View style={styles.content}>
+              <View style={styles.topRow}>
+                <Text style={[styles.moodLabel, { color: moodColor }]}>
+                  {mood.label}
+                </Text>
+                <Text style={styles.time}>{formatRelative(entry.createdAt)}</Text>
+              </View>
+
+              {entry.note && (
+                <Text style={styles.note} numberOfLines={2}>
+                  {entry.note}
+                </Text>
+              )}
+
+              {entry.address && (
+                <Text style={styles.address} numberOfLines={1}>
+                  📍 {entry.address}
+                </Text>
+              )}
+            </View>
+
+            {/* 缩略图 */}
+            {entry.photoUri && (
+              <Image source={{ uri: entry.photoUri }} style={styles.thumbnail} />
+            )}
           </View>
-
-          {entry.note && (
-            <Text style={styles.note} numberOfLines={2}>
-              {entry.note}
-            </Text>
-          )}
-
-          {entry.address && (
-            <Text style={styles.address} numberOfLines={1}>
-              📍 {entry.address}
-            </Text>
-          )}
         </View>
-
-        {/* 缩略图 */}
-        {entry.photoUri && (
-          <Image source={{ uri: entry.photoUri }} style={styles.thumbnail} />
-        )}
-      </View>
-    </TouchableOpacity>
+      </Animated.View>
+    </Pressable>
   );
 };
 
@@ -57,13 +98,23 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    padding: 14,
     marginBottom: 10,
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  colorStripe: {
+    width: 4,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 14,
   },
   row: {
     flexDirection: 'row',
@@ -76,7 +127,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
     marginRight: 12,
   },
   emoji: {
@@ -93,7 +143,7 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   time: {
     fontSize: 12,
@@ -111,9 +161,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   thumbnail: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     marginLeft: 10,
   },
 });

@@ -47,6 +47,34 @@ export const StatsScreen: React.FC = () => {
     return MOOD_OPTIONS.find((m) => m.type === sorted[0][0]) || null;
   }, [moodCounts, totalCount]);
 
+  // 连续记录天数
+  const streakDays = useMemo(() => {
+    if (entries.length === 0) return 0;
+    const dates = [...new Set(entries.map((e) => dayjs(e.createdAt).format('YYYY-MM-DD')))].sort().reverse();
+    let streak = 0;
+    let current = dayjs();
+    for (const dateStr of dates) {
+      const diff = current.diff(dayjs(dateStr), 'day');
+      if (diff <= 1) {
+        streak++;
+        current = dayjs(dateStr);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }, [entries]);
+
+  // 不同记录天数
+  const uniqueDays = useMemo(() => {
+    return new Set(entries.map((e) => dayjs(e.createdAt).format('YYYY-MM-DD'))).size;
+  }, [entries]);
+
+  // 照片数
+  const photoCount = useMemo(() => {
+    return entries.filter((e) => e.photoUri).length;
+  }, [entries]);
+
   if (entries.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -112,10 +140,31 @@ export const StatsScreen: React.FC = () => {
                   ]}
                 />
               </View>
-              <Text style={styles.barCount}>{count}</Text>
+              <Text style={styles.barCount}>
+                {count}{totalCount > 0 ? ` (${Math.round((count / totalCount) * 100)}%)` : ''}
+              </Text>
             </View>
           );
         })}
+      </View>
+
+      {/* 连续记录天数 & 有趣统计 */}
+      <View style={styles.insightsRow}>
+        <View style={styles.insightCard}>
+          <Text style={styles.insightEmoji}>🔥</Text>
+          <Text style={styles.insightNumber}>{streakDays}</Text>
+          <Text style={styles.insightLabel}>连续记录</Text>
+        </View>
+        <View style={styles.insightCard}>
+          <Text style={styles.insightEmoji}>📅</Text>
+          <Text style={styles.insightNumber}>{uniqueDays}</Text>
+          <Text style={styles.insightLabel}>记录天数</Text>
+        </View>
+        <View style={styles.insightCard}>
+          <Text style={styles.insightEmoji}>📸</Text>
+          <Text style={styles.insightNumber}>{photoCount}</Text>
+          <Text style={styles.insightLabel}>照片数</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -260,10 +309,42 @@ const styles = StyleSheet.create({
     minWidth: 4,
   },
   barCount: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: Colors.text,
-    width: 28,
+    width: 52,
     textAlign: 'right',
+  },
+  insightsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  insightCard: {
+    flex: 1,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  insightEmoji: {
+    fontSize: 24,
+    marginBottom: 6,
+  },
+  insightNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+  insightLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
   },
 });
