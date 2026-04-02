@@ -1,42 +1,69 @@
-import { Paths, File, Directory } from 'expo-file-system';
+// 简易键值存储 - 优先使用 expo-file-system，回退到内存
+let memoryStore: Record<string, string> = {};
+let useFileSystem = false;
+let fsModule: any = null;
 
-// 简易的本地键值存储（基于文件系统）
-const getStorageDir = (): Directory => {
-  const dir = new Directory(Paths.document, 'kv-storage');
-  if (!dir.exists) {
-    dir.create();
+try {
+  fsModule = require('expo-file-system');
+  // 检查新API是否可用
+  if (fsModule.Paths && fsModule.File && fsModule.Directory) {
+    useFileSystem = true;
   }
-  return dir;
+} catch {
+  useFileSystem = false;
+}
+
+const getStorageDir = () => {
+  if (!useFileSystem) return null;
+  try {
+    const dir = new fsModule.Directory(fsModule.Paths.document, 'kv-storage');
+    if (!dir.exists) {
+      dir.create();
+    }
+    return dir;
+  } catch {
+    useFileSystem = false;
+    return null;
+  }
 };
 
 const AsyncStorage = {
   getItem: (key: string): string | null => {
-    try {
-      const file = new File(getStorageDir(), `${key}.txt`);
-      if (!file.exists) return null;
-      return file.textSync();
-    } catch {
-      return null;
+    if (useFileSystem) {
+      try {
+        const dir = getStorageDir();
+        if (!dir) return memoryStore[key] || null;
+        const file = new fsModule.File(dir, `${key}.txt`);
+        if (!file.exists) return null;
+        return file.textSync();
+      } catch {
+        return memoryStore[key] || null;
+      }
     }
+    return memoryStore[key] || null;
   },
 
   setItem: (key: string, value: string): void => {
-    try {
-      const file = new File(getStorageDir(), `${key}.txt`);
-      file.write(value);
-    } catch {
-      // 静默失败
+    memoryStore[key] = value;
+    if (useFileSystem) {
+      try {
+        const dir = getStorageDir();
+        if (!dir) return;
+        const file = new fsModule.File(dir, `${key}.txt`);
+        file.write(value);
+      } catch {}
     }
   },
 
   removeItem: (key: string): void => {
-    try {
-      const file = new File(getStorageDir(), `${key}.txt`);
-      if (file.exists) {
-        file.delete();
-      }
-    } catch {
-      // 静默失败
+    delete memoryStore[key];
+    if (useFileSystem) {
+      try {
+        const dir = getStorageDir();
+        if (!dir) return;
+        const file = new fsModule.File(dir, `${key}.txt`);
+        if (file.exists) file.delete();
+      } catch {}
     }
   },
 };
