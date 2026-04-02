@@ -125,7 +125,7 @@ export const StatsScreen: React.FC = () => {
         <Text style={styles.chartTitle}>心情分布</Text>
         {MOOD_OPTIONS.map((mood) => {
           const count = moodCounts[mood.type] || 0;
-          const width = totalCount > 0 ? (count / maxCount) * 100 : 0;
+          const widthPercent = totalCount > 0 ? Math.max((count / maxCount) * 100, 3) : 0;
           return (
             <View key={mood.type} style={styles.barRow}>
               <Text style={styles.barEmoji}>{mood.emoji}</Text>
@@ -134,7 +134,7 @@ export const StatsScreen: React.FC = () => {
                   style={[
                     styles.barFill,
                     {
-                      width: `${width}%`,
+                      width: `${widthPercent}%`,
                       backgroundColor: MoodColors[mood.type as MoodType],
                     },
                   ]}
@@ -306,7 +306,6 @@ const styles = StyleSheet.create({
   barFill: {
     height: '100%',
     borderRadius: 12,
-    minWidth: 4,
   },
   barCount: {
     fontSize: 12,

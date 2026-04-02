@@ -9,9 +9,8 @@ import { Colors } from '../constants/colors';
 
 const Tab = createBottomTabNavigator();
 
-// 自定义Tab图标组件
 const TabIcon = ({ icon, focused }: { icon: string; focused: boolean }) => (
-  <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+  <View style={[styles.iconContainer, focused ? styles.iconContainerActive : undefined]}>
     <Text style={styles.tabIcon}>{icon}</Text>
   </View>
 );
@@ -25,7 +24,6 @@ export const AppNavigator: React.FC = () => {
           tabBarInactiveTintColor: Colors.textSecondary,
           tabBarStyle: styles.tabBar,
           tabBarLabelStyle: styles.tabLabel,
-          tabBarItemStyle: styles.tabItem,
           headerStyle: styles.header,
           headerTitleStyle: styles.headerTitle,
           headerShadowVisible: false,
@@ -48,7 +46,6 @@ export const AppNavigator: React.FC = () => {
           options={{
             title: '时间线',
             headerTitle: '心情时间线',
-            headerTitleAlign: 'left',
             tabBarIcon: ({ focused }) => (
               <TabIcon icon="📋" focused={focused} />
             ),
@@ -60,7 +57,6 @@ export const AppNavigator: React.FC = () => {
           options={{
             title: '统计',
             headerTitle: '心情统计',
-            headerTitleAlign: 'left',
             tabBarIcon: ({ focused }) => (
               <TabIcon icon="📊" focused={focused} />
             ),
@@ -84,9 +80,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
-  },
-  tabItem: {
-    gap: 2,
   },
   tabIcon: {
     fontSize: 20,
