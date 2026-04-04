@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,65 +7,127 @@ import {
   Dimensions,
 } from 'react-native';
 import { Colors, MoodColors } from '../constants/colors';
+import { MOOD_OPTIONS } from '../constants/moods';
+import { MoodType } from '../types';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface Props {
   onGetStarted: () => void;
 }
 
+// Reflectly 风格的引导式 onboarding — 学习的同时就完成了第一次操作
 export const WelcomeOverlay: React.FC<Props> = ({ onGetStarted }) => {
+  const [step, setStep] = useState(0);
+  const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
+
+  // Step 0: 欢迎
+  // Step 1: 试试选一个心情
+  // Step 2: 完成！
+  const handleMoodSelect = (mood: MoodType) => {
+    setSelectedMood(mood);
+    setTimeout(() => setStep(2), 400);
+  };
+
   return (
     <View style={styles.overlay}>
       <View style={styles.card}>
-        {/* 彩色圆点装饰 */}
-        <View style={styles.dotsRow}>
-          {[MoodColors.happy, MoodColors.good, Colors.primary, MoodColors.sad, MoodColors.angry].map(
-            (color, i) => (
-              <View key={i} style={[styles.decorDot, { backgroundColor: color }]} />
-            )
-          )}
+        {step === 0 && (
+          <>
+            {/* 装饰 */}
+            <View style={styles.decorRow}>
+              {[MoodColors.amazing, MoodColors.happy, MoodColors.good, MoodColors.calm, Colors.primary].map(
+                (color, i) => (
+                  <View key={i} style={[styles.decorDot, { backgroundColor: color }]} />
+                )
+              )}
+            </View>
+
+            <Text style={styles.title}>欢迎来到 MapJournal</Text>
+            <Text style={styles.subtitle}>在地图上记录你的每一个心情时刻</Text>
+
+            <View style={styles.features}>
+              <FeatureItem icon="🗺️" text="随时随地记录心情到地图" />
+              <FeatureItem icon="📸" text="用照片定格美好瞬间" />
+              <FeatureItem icon="📊" text="追踪你的心情趋势变化" />
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(1)} activeOpacity={0.8}>
+              <Text style={styles.primaryButtonText}>开始体验</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {step === 1 && (
+          <>
+            <Text style={styles.stepTitle}>试试看！</Text>
+            <Text style={styles.stepSubtitle}>选一个代表你现在心情的表情</Text>
+
+            <View style={styles.moodGrid}>
+              {MOOD_OPTIONS.slice(0, 4).map((mood) => (
+                <TouchableOpacity
+                  key={mood.type}
+                  style={[
+                    styles.moodOption,
+                    selectedMood === mood.type ? { backgroundColor: mood.color + '20', borderColor: mood.color } : undefined,
+                  ]}
+                  onPress={() => handleMoodSelect(mood.type)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text style={styles.moodLabel}>{mood.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.moodGrid}>
+              {MOOD_OPTIONS.slice(4).map((mood) => (
+                <TouchableOpacity
+                  key={mood.type}
+                  style={[
+                    styles.moodOption,
+                    selectedMood === mood.type ? { backgroundColor: mood.color + '20', borderColor: mood.color } : undefined,
+                  ]}
+                  onPress={() => handleMoodSelect(mood.type)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text style={styles.moodLabel}>{mood.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <Text style={styles.doneEmoji}>🎉</Text>
+            <Text style={styles.stepTitle}>太好了！</Text>
+            <Text style={styles.stepSubtitle}>
+              你已经学会了如何记录心情{'\n'}
+              在地图上点击快速记录栏开始使用吧
+            </Text>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={onGetStarted} activeOpacity={0.8}>
+              <Text style={styles.primaryButtonText}>进入地图</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* 步骤指示器 */}
+        <View style={styles.dots}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[styles.stepDot, step === i ? styles.stepDotActive : undefined]} />
+          ))}
         </View>
-
-        <Text style={styles.title}>MapJournal</Text>
-        <Text style={styles.subtitle}>用地图记录你的每一个心情时刻</Text>
-
-        {/* 功能介绍 */}
-        <View style={styles.features}>
-          <FeatureRow
-            color={MoodColors.good}
-            title="心情记录"
-            desc="随时随地记录你的心情和想法"
-          />
-          <FeatureRow
-            color={Colors.primary}
-            title="拍照留念"
-            desc="用照片定格当下的美好瞬间"
-          />
-          <FeatureRow
-            color={MoodColors.happy}
-            title="心情统计"
-            desc="回顾你的心情变化趋势"
-          />
-        </View>
-
-        <TouchableOpacity style={styles.button} onPress={onGetStarted} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>开始记录</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.hint}>需要允许访问位置信息</Text>
       </View>
     </View>
   );
 };
 
-const FeatureRow = ({ color, title, desc }: { color: string; title: string; desc: string }) => (
+const FeatureItem = ({ icon, text }: { icon: string; text: string }) => (
   <View style={styles.featureRow}>
-    <View style={[styles.featureDot, { backgroundColor: color }]} />
-    <View style={styles.featureTextContainer}>
-      <Text style={styles.featureTitle}>{title}</Text>
-      <Text style={styles.featureDesc}>{desc}</Text>
-    </View>
+    <Text style={styles.featureIcon}>{icon}</Text>
+    <Text style={styles.featureText}>{text}</Text>
   </View>
 );
 
@@ -76,7 +138,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
@@ -85,27 +147,27 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 24,
-    padding: 32,
+    padding: 28,
     width: width - 48,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 20,
   },
-  dotsRow: {
+  decorRow: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   decorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginHorizontal: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: Colors.text,
     marginBottom: 8,
@@ -114,42 +176,32 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     color: Colors.textSecondary,
-    marginBottom: 28,
+    marginBottom: 24,
     textAlign: 'center',
   },
   features: {
     width: '100%',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  featureDot: {
+  featureIcon: {
+    fontSize: 22,
     width: 36,
-    height: 36,
-    borderRadius: 12,
-    marginRight: 14,
   },
-  featureTextContainer: {
+  featureText: {
     flex: 1,
-  },
-  featureTitle: {
     fontSize: 15,
-    fontWeight: '700',
     color: Colors.text,
-    marginBottom: 2,
+    fontWeight: '500',
   },
-  featureDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  button: {
+  primaryButton: {
     backgroundColor: Colors.primary,
     borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
+    paddingVertical: 15,
     width: '100%',
     alignItems: 'center',
     shadowColor: Colors.primary,
@@ -158,14 +210,67 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  buttonText: {
+  primaryButtonText: {
     fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  hint: {
-    fontSize: 12,
+  // Step styles
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  stepSubtitle: {
+    fontSize: 15,
     color: Colors.textSecondary,
-    marginTop: 12,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  doneEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  moodGrid: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    width: '100%',
+  },
+  moodOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginHorizontal: 3,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  moodEmoji: {
+    fontSize: 24,
+  },
+  moodLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  // Step indicators
+  dots: {
+    flexDirection: 'row',
+    marginTop: 20,
+  },
+  stepDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.border,
+    marginHorizontal: 4,
+  },
+  stepDotActive: {
+    backgroundColor: Colors.primary,
+    width: 18,
   },
 });

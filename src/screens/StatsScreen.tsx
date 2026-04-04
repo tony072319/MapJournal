@@ -11,6 +11,7 @@ import { Colors, MoodColors } from '../constants/colors';
 import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodChart } from '../components/MoodChart';
 import { MoodCalendar } from '../components/MoodCalendar';
+import { YearPixels } from '../components/YearPixels';
 import { EntryDetail } from '../components/EntryDetail';
 import { ACTIVITY_OPTIONS } from '../constants/activities';
 import { MoodType, Entry } from '../types';
@@ -213,6 +214,9 @@ export const StatsScreen: React.FC = () => {
           );
         })}
       </View>
+
+      {/* 年度像素 — Pixels/Year in Color 风格 */}
+      <YearPixels entries={entries} />
 
       {/* 最常做的活动 */}
       {topActivities.length > 0 && (
