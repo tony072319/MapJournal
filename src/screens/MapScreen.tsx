@@ -6,7 +6,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Image,
+  Dimensions,
 } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
@@ -16,10 +16,11 @@ import { TileMap } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
-import { MoodFilter } from '../components/MoodFilter';
 import { Entry, MoodType } from '../types';
 import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const MapScreen: React.FC = () => {
   const { location, loading, error } = useLocation();
@@ -27,17 +28,7 @@ export const MapScreen: React.FC = () => {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
-
-  const filteredEntries = moodFilters.length === 0
-    ? entries
-    : entries.filter((e) => moodFilters.includes(e.mood as MoodType));
-
-  const handleToggleMoodFilter = useCallback((mood: MoodType) => {
-    setMoodFilters((prev) =>
-      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
-    );
-  }, []);
+  const [panelExpanded, setPanelExpanded] = useState(false);
 
   useEffect(() => {
     try {
@@ -50,6 +41,11 @@ export const MapScreen: React.FC = () => {
     setShowWelcome(false);
     try { AsyncStorage.setItem('hasLaunched', 'true'); } catch {}
   };
+
+  const handleMarkerPress = useCallback((id: string) => {
+    const entry = entries.find((e) => e.id === id);
+    if (entry) setSelectedEntry(entry);
+  }, [entries]);
 
   if (loading) {
     return (
@@ -69,123 +65,95 @@ export const MapScreen: React.FC = () => {
     );
   }
 
+  // 最近的几条记录（用于底部面板）
+  const recentEntries = [...entries]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
   return (
     <View style={styles.container}>
-      {/* 头部 */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>MapJournal</Text>
+      {/* 全屏地图 */}
+      <TileMap
+        location={location}
+        markers={entries.map((e) => ({
+          id: e.id,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          emoji: e.emoji,
+          moodColor: MoodColors[e.mood as MoodType] || Colors.primary,
+        }))}
+        onMarkerPress={handleMarkerPress}
+        fullscreen
+        zoom={15}
+      />
+
+      {/* 顶部浮动信息 */}
+      <View style={styles.topOverlay}>
+        <View style={styles.topBar}>
+          <Text style={styles.topTitle}>MapJournal</Text>
           {entries.length > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{entries.length} 条记录</Text>
+            <View style={styles.topBadge}>
+              <Text style={styles.topBadgeText}>{entries.length}</Text>
             </View>
           )}
         </View>
       </View>
 
-      {/* 地图 */}
-      <TileMap
-        location={location}
-        markers={filteredEntries.map((e) => ({
-          id: e.id,
-          latitude: e.latitude,
-          longitude: e.longitude,
-          emoji: e.emoji,
-        }))}
-        onMarkerPress={(id) => {
-          const entry = entries.find((e) => e.id === id);
-          if (entry) setSelectedEntry(entry);
-        }}
-        height={220}
-      />
+      {/* 底部浮动面板 */}
+      <View style={[styles.bottomPanel, panelExpanded ? styles.bottomPanelExpanded : undefined]}>
+        {/* 拖拽把手 */}
+        <TouchableOpacity
+          style={styles.panelHandle}
+          onPress={() => setPanelExpanded(!panelExpanded)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.handleBar} />
+          <Text style={styles.panelTitle}>
+            {entries.length === 0 ? '还没有心情记录' : `最近的心情`}
+          </Text>
+        </TouchableOpacity>
 
-      {/* 心情筛选 */}
-      {entries.length > 0 && (
-        <View style={styles.filterRow}>
-          <MoodFilter
-            activeFilters={moodFilters}
-            onToggle={handleToggleMoodFilter}
-            onClear={() => setMoodFilters([])}
-          />
-        </View>
-      )}
+        {/* 面板内容 */}
+        {panelExpanded && (
+          <ScrollView
+            style={styles.panelScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            {entries.length === 0 && (
+              <Text style={styles.panelEmpty}>
+                点击下方 "+" 在当前位置记录你的心情
+              </Text>
+            )}
 
-      {/* 记录列表 */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {entries.length === 0 && (
-          <View style={styles.emptyState}>
-            {/* 装饰性视觉元素 — 像 FocusTraveller 那样用视觉隐喻 */}
-            <View style={styles.emptyScene}>
-              <View style={styles.emptyMountain}>
-                <View style={[styles.mountainPeak, { height: 40, backgroundColor: '#E0E7FF' }]} />
-                <View style={[styles.mountainPeak, { height: 60, backgroundColor: '#C7D2FE', marginLeft: -10 }]} />
-                <View style={[styles.mountainPeak, { height: 50, backgroundColor: '#DDD6FE', marginLeft: -10 }]} />
-              </View>
-              <View style={styles.emptyPath}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <View key={i} style={[styles.pathDot, { opacity: 0.3 + i * 0.15 }]} />
-                ))}
-              </View>
-            </View>
-            <Text style={styles.emptyTitle}>开始你的心情旅程</Text>
-            <Text style={styles.emptyHint}>
-              {'每一个心情都值得被记录\n点击下方 "+" 留下你的第一个足迹'}
-            </Text>
-          </View>
-        )}
-
-        {filteredEntries.length === 0 && entries.length > 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>没有匹配的记录</Text>
-            <Text style={styles.emptyHint}>试试取消筛选条件</Text>
-          </View>
-        )}
-
-        {filteredEntries.map((entry) => {
-          const mood = getMoodByType(entry.mood);
-          const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
-          return (
-            <TouchableOpacity
-              key={entry.id}
-              style={styles.card}
-              onPress={() => setSelectedEntry(entry)}
-              activeOpacity={0.7}
-            >
-              {/* 顶部心情色条 */}
-              <View style={[styles.cardColorBar, { backgroundColor: moodColor }]} />
-
-              <View style={styles.cardBody}>
-                <View style={styles.cardRow}>
-                  <View style={[styles.emojiCircle, { backgroundColor: moodColor + '12' }]}>
-                    <Text style={styles.cardEmoji}>{entry.emoji}</Text>
-                  </View>
-                  <View style={styles.cardContent}>
-                    <View style={styles.cardTopRow}>
-                      <Text style={[styles.cardMood, { color: moodColor }]}>{mood.label}</Text>
-                      <Text style={styles.cardTime}>{formatRelative(entry.createdAt)}</Text>
-                    </View>
+            {recentEntries.map((entry) => {
+              const mood = getMoodByType(entry.mood);
+              const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
+              return (
+                <TouchableOpacity
+                  key={entry.id}
+                  style={styles.panelCard}
+                  onPress={() => setSelectedEntry(entry)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.panelCardDot, { backgroundColor: moodColor }]} />
+                  <Text style={styles.panelCardEmoji}>{entry.emoji}</Text>
+                  <View style={styles.panelCardContent}>
+                    <Text style={[styles.panelCardMood, { color: moodColor }]}>{mood.label}</Text>
                     {entry.note ? (
-                      <Text style={styles.cardNote} numberOfLines={2}>{entry.note}</Text>
-                    ) : null}
-                    {entry.address ? (
-                      <Text style={styles.cardAddress} numberOfLines={1}>{entry.address}</Text>
+                      <Text style={styles.panelCardNote} numberOfLines={1}>{entry.note}</Text>
                     ) : null}
                   </View>
-                </View>
+                  <Text style={styles.panelCardTime}>{formatRelative(entry.createdAt)}</Text>
+                </TouchableOpacity>
+              );
+            })}
 
-                {/* 照片预览 */}
-                {entry.photoUri ? (
-                  <Image source={{ uri: entry.photoUri }} style={styles.cardPhoto} />
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            {entries.length > 5 && (
+              <Text style={styles.panelMore}>还有 {entries.length - 5} 条记录...</Text>
+            )}
+          </ScrollView>
+        )}
+      </View>
 
       {/* "+" 按钮 */}
       <TouchableOpacity
@@ -215,162 +183,7 @@ export const MapScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  countBadge: {
-    backgroundColor: Colors.primary + '12',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  countText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  filterRow: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  // 空状态
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 20,
-  },
-  emptyScene: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  emptyMountain: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 12,
-  },
-  mountainPeak: {
-    width: 36,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 4,
-  },
-  emptyPath: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  pathDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginHorizontal: 6,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 10,
-    letterSpacing: -0.3,
-  },
-  emptyHint: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  // 卡片
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  cardColorBar: {
-    height: 3,
-  },
-  cardBody: {
-    padding: 14,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  emojiCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cardEmoji: {
-    fontSize: 24,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  cardMood: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cardTime: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  cardNote: {
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  cardAddress: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  cardPhoto: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12,
-    marginTop: 10,
-  },
-  // 加载/错误
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -394,14 +207,140 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  // 顶部浮动
+  topOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 16,
+    right: 16,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  topTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.text,
+    flex: 1,
+    letterSpacing: -0.3,
+  },
+  topBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  topBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // 底部面板
+  bottomPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 80,
+    maxHeight: 120,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  bottomPanelExpanded: {
+    maxHeight: SCREEN_HEIGHT * 0.45,
+  },
+  panelHandle: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    marginBottom: 10,
+  },
+  panelTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  panelScroll: {
+    paddingHorizontal: 16,
+  },
+  panelEmpty: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 12,
+  },
+  panelCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  panelCardDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 10,
+  },
+  panelCardEmoji: {
+    fontSize: 22,
+    marginRight: 12,
+  },
+  panelCardContent: {
+    flex: 1,
+  },
+  panelCardMood: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  panelCardNote: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  panelCardTime: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  panelMore: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: Colors.textSecondary,
+    paddingVertical: 12,
+  },
   // + 按钮
   addButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 130,
     alignSelf: 'center',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -412,7 +351,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   addButtonText: {
-    fontSize: 32,
+    fontSize: 30,
     color: '#FFFFFF',
     fontWeight: '300',
     marginTop: -2,
