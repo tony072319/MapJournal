@@ -7,6 +7,7 @@ interface EntriesContextType {
   loading: boolean;
   addEntry: (data: NewEntry) => Promise<void>;
   removeEntry: (id: string) => Promise<void>;
+  updateEntry: (id: string, data: Partial<NewEntry>) => Promise<void>;
   refreshEntries: () => Promise<void>;
 }
 
@@ -15,6 +16,7 @@ const EntriesContext = createContext<EntriesContextType>({
   loading: true,
   addEntry: async () => {},
   removeEntry: async () => {},
+  updateEntry: async () => {},
   refreshEntries: async () => {},
 });
 
@@ -24,7 +26,6 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 初始化：从数据库加载所有记录
   const loadEntries = useCallback(async () => {
     try {
       const allEntries = await entriesDb.getAllEntries();
@@ -40,17 +41,21 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({
     loadEntries();
   }, [loadEntries]);
 
-  // 添加新记录
   const addEntry = useCallback(async (data: NewEntry) => {
     const newEntry = await entriesDb.createEntry(data);
     setEntries((prev) => [newEntry, ...prev]);
   }, []);
 
-  // 删除记录
   const removeEntry = useCallback(async (id: string) => {
     await entriesDb.deleteEntry(id);
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }, []);
+
+  const updateEntry = useCallback(async (id: string, data: Partial<NewEntry>) => {
+    await entriesDb.updateEntry(id, data);
+    // 重新加载以获取更新后的数据
+    await loadEntries();
+  }, [loadEntries]);
 
   return (
     <EntriesContext.Provider
@@ -59,6 +64,7 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({
         loading,
         addEntry,
         removeEntry,
+        updateEntry,
         refreshEntries: loadEntries,
       }}
     >
@@ -67,7 +73,6 @@ export const EntriesProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// Hook: 在任何组件中使用心情数据
 export const useEntries = () => {
   const context = useContext(EntriesContext);
   if (!context) {

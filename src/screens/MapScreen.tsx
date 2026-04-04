@@ -114,10 +114,10 @@ export const MapScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        {/* 连续记录 + 7天打卡 */}
-        <StreakBanner entries={entries} />
+        {/* 收起时：连续记录 + 7天打卡 */}
+        {!panelExpanded && <StreakBanner entries={entries} />}
 
-        {/* 面板内容 */}
+        {/* 展开时：最近记录列表 */}
         {panelExpanded && (
           <ScrollView
             style={styles.panelScroll}
