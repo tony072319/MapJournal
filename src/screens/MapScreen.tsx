@@ -12,6 +12,7 @@ import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
+import { TileMap } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
@@ -80,10 +81,23 @@ export const MapScreen: React.FC = () => {
             </View>
           )}
         </View>
-        <Text style={styles.location}>
-          {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-        </Text>
       </View>
+
+      {/* 地图 */}
+      <TileMap
+        location={location}
+        markers={filteredEntries.map((e) => ({
+          id: e.id,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          emoji: e.emoji,
+        }))}
+        onMarkerPress={(id) => {
+          const entry = entries.find((e) => e.id === id);
+          if (entry) setSelectedEntry(entry);
+        }}
+        height={220}
+      />
 
       {/* 心情筛选 */}
       {entries.length > 0 && (
@@ -96,7 +110,7 @@ export const MapScreen: React.FC = () => {
         </View>
       )}
 
-      {/* 内容 */}
+      {/* 记录列表 */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -232,11 +246,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: Colors.primary,
-  },
-  location: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
   },
   filterRow: {
     paddingHorizontal: 16,
