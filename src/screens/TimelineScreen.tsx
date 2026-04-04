@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   Image,
+  TextInput,
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
@@ -92,6 +93,7 @@ export const TimelineScreen: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
+  const [searchText, setSearchText] = useState('');
 
   const handleToggleMoodFilter = (mood: MoodType) => {
     setMoodFilters((prev) =>
@@ -102,7 +104,15 @@ export const TimelineScreen: React.FC = () => {
   const sections: Section[] = useMemo(() => {
     let filtered = entries;
     if (moodFilters.length > 0) {
-      filtered = entries.filter((e) => moodFilters.includes(e.mood as MoodType));
+      filtered = filtered.filter((e) => moodFilters.includes(e.mood as MoodType));
+    }
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase();
+      filtered = filtered.filter((e) =>
+        (e.note && e.note.toLowerCase().includes(q)) ||
+        (e.address && e.address.toLowerCase().includes(q)) ||
+        (e.activities && e.activities.toLowerCase().includes(q))
+      );
     }
 
     const sorted = [...filtered].sort(
@@ -121,7 +131,7 @@ export const TimelineScreen: React.FC = () => {
       data,
       count: data.length,
     }));
-  }, [entries, moodFilters]);
+  }, [entries, moodFilters, searchText]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -153,11 +163,22 @@ export const TimelineScreen: React.FC = () => {
         sections={sections}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-          <MoodFilter
-            activeFilters={moodFilters}
-            onToggle={handleToggleMoodFilter}
-            onClear={() => setMoodFilters([])}
-          />
+          <View>
+            {/* 搜索栏 */}
+            <TextInput
+              style={styles.searchInput}
+              placeholder="搜索心情、地点、活动..."
+              placeholderTextColor={Colors.textSecondary}
+              value={searchText}
+              onChangeText={setSearchText}
+              clearButtonMode="while-editing"
+            />
+            <MoodFilter
+              activeFilters={moodFilters}
+              onToggle={handleToggleMoodFilter}
+              onClear={() => setMoodFilters([])}
+            />
+          </View>
         }
         renderItem={({ item }) => (
           <TimelineItem entry={item} onPress={() => setSelectedEntry(item)} />
@@ -198,6 +219,17 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 32,
+  },
+  searchInput: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.text,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   // 时间线条目
   item: {
