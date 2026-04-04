@@ -104,16 +104,22 @@ export const MapScreen: React.FC = () => {
       >
         {entries.length === 0 && (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconRow}>
-              {['😄', '😊', '😐', '😢', '😠'].map((e, i) => (
-                <View key={i} style={styles.emptyEmojiDot}>
-                  <Text style={styles.emptyEmojiText}>{e}</Text>
-                </View>
-              ))}
+            {/* 装饰性视觉元素 — 像 FocusTraveller 那样用视觉隐喻 */}
+            <View style={styles.emptyScene}>
+              <View style={styles.emptyMountain}>
+                <View style={[styles.mountainPeak, { height: 40, backgroundColor: '#E0E7FF' }]} />
+                <View style={[styles.mountainPeak, { height: 60, backgroundColor: '#C7D2FE', marginLeft: -10 }]} />
+                <View style={[styles.mountainPeak, { height: 50, backgroundColor: '#DDD6FE', marginLeft: -10 }]} />
+              </View>
+              <View style={styles.emptyPath}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <View key={i} style={[styles.pathDot, { opacity: 0.3 + i * 0.15 }]} />
+                ))}
+              </View>
             </View>
-            <Text style={styles.emptyTitle}>记录你的心情</Text>
+            <Text style={styles.emptyTitle}>开始你的心情旅程</Text>
             <Text style={styles.emptyHint}>
-              {'点击下方 "+" 按钮\n开始你的第一条心情记录'}
+              {'每一个心情都值得被记录\n点击下方 "+" 留下你的第一个足迹'}
             </Text>
           </View>
         )}
@@ -246,40 +252,48 @@ const styles = StyleSheet.create({
   // 空状态
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 50,
+    paddingHorizontal: 20,
   },
-  emptyIconRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  emptyEmojiDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.card,
-    justifyContent: 'center',
+  emptyScene: {
     alignItems: 'center',
-    marginHorizontal: 4,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 28,
   },
-  emptyEmojiText: {
-    fontSize: 20,
+  emptyMountain: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 12,
+  },
+  mountainPeak: {
+    width: 36,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+  emptyPath: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pathDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginHorizontal: 6,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: -0.3,
   },
   emptyHint: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
   // 卡片
   card: {

@@ -121,14 +121,16 @@ export const TimelineScreen: React.FC = () => {
   if (entries.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <View style={styles.emptyIcon}>
-          <View style={[styles.emptyBar, { backgroundColor: MoodColors.happy, height: 32 }]} />
-          <View style={[styles.emptyBar, { backgroundColor: MoodColors.good, height: 48 }]} />
-          <View style={[styles.emptyBar, { backgroundColor: Colors.primary, height: 40 }]} />
+        {/* 时间线视觉隐喻 */}
+        <View style={styles.emptyTimeline}>
+          <View style={styles.emptyTimelineLine} />
+          {[0.3, 0.5, 0.7].map((opacity, i) => (
+            <View key={i} style={[styles.emptyTimelineDot, { opacity }]} />
+          ))}
         </View>
-        <Text style={styles.emptyTitle}>还没有心情记录</Text>
+        <Text style={styles.emptyTitle}>你的心情故事</Text>
         <Text style={styles.emptyHint}>
-          {'去地图页面点击 "+" 按钮\n记录你的第一条心情吧'}
+          {'每个时刻都是故事的一部分\n去首页记录你的第一条心情'}
         </Text>
       </View>
     );
@@ -296,15 +298,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 40,
   },
-  emptyIcon: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+  emptyTimeline: {
+    alignItems: 'center',
     marginBottom: 24,
+    height: 80,
+    justifyContent: 'space-around',
   },
-  emptyBar: {
-    width: 16,
-    borderRadius: 8,
-    marginHorizontal: 3,
+  emptyTimelineLine: {
+    position: 'absolute',
+    width: 2,
+    height: '100%',
+    backgroundColor: Colors.border,
+  },
+  emptyTimelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.primary,
   },
   emptyTitle: {
     fontSize: 20,
