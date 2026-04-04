@@ -15,6 +15,7 @@ import * as Location from 'expo-location';
 import { Colors } from '../constants/colors';
 import { MoodPicker } from './MoodPicker';
 import { PhotoPicker } from './PhotoPicker';
+import { ActivityPicker } from './ActivityPicker';
 import { useEntries } from '../context/EntriesContext';
 import { MoodType, UserLocation } from '../types';
 
@@ -30,6 +31,7 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
   const [emoji, setEmoji] = useState<string>('');
   const [note, setNote] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [activities, setActivities] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
@@ -72,6 +74,7 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
         mood, emoji,
         note: note.trim() || undefined,
         photoUri: photoUri || undefined,
+        activities: activities.length > 0 ? activities : undefined,
         latitude: location.latitude,
         longitude: location.longitude,
         address: address || undefined,
@@ -90,6 +93,7 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
     setEmoji('');
     setNote('');
     setPhotoUri(null);
+    setActivities([]);
     setAddress(null);
   };
 
@@ -147,6 +151,16 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
 
           {/* 问题式流程 */}
           <MoodPicker selected={mood} onSelect={handleMoodSelect} />
+
+          {/* 活动标签 — Daylio 风格 */}
+          <ActivityPicker
+            selected={activities}
+            onToggle={(id) =>
+              setActivities((prev) =>
+                prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+              )
+            }
+          />
 
           <PhotoPicker photoUri={photoUri} onPhotoPicked={setPhotoUri} />
 

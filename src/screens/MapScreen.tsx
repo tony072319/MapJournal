@@ -16,6 +16,7 @@ import { TileMap } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
+import { QuickMoodBar } from '../components/QuickMoodBar';
 import { Entry, MoodType } from '../types';
 import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
@@ -154,14 +155,14 @@ export const MapScreen: React.FC = () => {
         )}
       </View>
 
-      {/* "+" 按钮 */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setShowNewEntry(true)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      {/* 快速心情记录栏 — Daylio 风格一键记录 */}
+      <View style={styles.quickBarContainer}>
+        <QuickMoodBar
+          location={location}
+          onFullEntry={() => setShowNewEntry(true)}
+          onSaved={() => setPanelExpanded(false)}
+        />
+      </View>
 
       {showWelcome && <WelcomeOverlay onGetStarted={handleWelcomeClose} />}
 
@@ -332,27 +333,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     paddingVertical: 12,
   },
-  // + 按钮
-  addButton: {
+  // 快速记录栏
+  quickBarContainer: {
     position: 'absolute',
     bottom: 130,
-    alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  addButtonText: {
-    fontSize: 30,
-    color: '#FFFFFF',
-    fontWeight: '300',
-    marginTop: -2,
+    left: 20,
+    right: 20,
   },
 });

@@ -2,7 +2,6 @@ import * as SQLite from 'expo-sqlite';
 
 let db: SQLite.SQLiteDatabase | null = null;
 
-// 获取数据库实例（单例模式）
 export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   if (db) return db;
   db = await SQLite.openDatabaseAsync('mapjournal.db');
@@ -10,7 +9,6 @@ export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   return db;
 };
 
-// 初始化数据库表
 const initDatabase = async (database: SQLite.SQLiteDatabase) => {
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS entries (
@@ -19,6 +17,7 @@ const initDatabase = async (database: SQLite.SQLiteDatabase) => {
       emoji TEXT NOT NULL,
       note TEXT,
       photo_uri TEXT,
+      activities TEXT,
       latitude REAL NOT NULL,
       longitude REAL NOT NULL,
       address TEXT,
@@ -26,4 +25,11 @@ const initDatabase = async (database: SQLite.SQLiteDatabase) => {
       updated_at TEXT NOT NULL
     );
   `);
+
+  // 迁移：如果 activities 列不存在则添加
+  try {
+    await database.execAsync(`ALTER TABLE entries ADD COLUMN activities TEXT;`);
+  } catch {
+    // 列已存在，忽略
+  }
 };

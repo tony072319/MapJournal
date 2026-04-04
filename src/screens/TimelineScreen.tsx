@@ -13,6 +13,7 @@ import { EntryDetail } from '../components/EntryDetail';
 import { MoodFilter } from '../components/MoodFilter';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
+import { ACTIVITY_OPTIONS } from '../constants/activities';
 import { formatRelative, formatShortDate } from '../utils/dateFormat';
 import { Entry, MoodType } from '../types';
 import dayjs from 'dayjs';
@@ -59,6 +60,16 @@ const TimelineItem = ({ entry, onPress }: { entry: Entry; onPress: () => void })
           </View>
           <Text style={styles.itemTime}>{formatRelative(entry.createdAt)}</Text>
         </View>
+
+        {/* 活动标签 */}
+        {entry.activities ? (
+          <View style={styles.itemActivities}>
+            {(JSON.parse(entry.activities) as string[]).slice(0, 4).map((a) => {
+              const act = ACTIVITY_OPTIONS.find((o) => o.id === a);
+              return <Text key={a} style={styles.itemActivityTag}>{act ? `${act.icon} ${act.label}` : a}</Text>;
+            })}
+          </View>
+        ) : null}
 
         {entry.note ? (
           <Text style={styles.itemNote} numberOfLines={3}>{entry.note}</Text>
@@ -243,6 +254,23 @@ const styles = StyleSheet.create({
   itemTime: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  itemActivities: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  itemActivityTag: {
+    fontSize: 11,
+    color: Colors.primary,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 4,
+    marginBottom: 2,
+    fontWeight: '500',
+    overflow: 'hidden',
   },
   itemNote: {
     fontSize: 14,

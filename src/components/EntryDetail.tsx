@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
+import { ACTIVITY_OPTIONS } from '../constants/activities';
 import { formatDateTime } from '../utils/dateFormat';
 import { useEntries } from '../context/EntriesContext';
 import { Entry, MoodType } from '../types';
@@ -95,6 +96,22 @@ export const EntryDetail: React.FC<Props> = ({ entry, onClose }) => {
             >
               <Image source={{ uri: entry.photoUri }} style={styles.photo} />
             </TouchableOpacity>
+          ) : null}
+
+          {/* 活动标签 */}
+          {entry.activities ? (
+            <View style={styles.activitiesRow}>
+              {(JSON.parse(entry.activities) as string[]).map((a) => {
+                const act = ACTIVITY_OPTIONS.find((o) => o.id === a);
+                return (
+                  <View key={a} style={styles.activityChip}>
+                    <Text style={styles.activityChipText}>
+                      {act ? `${act.icon} ${act.label}` : a}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           ) : null}
 
           {/* 文字描述 */}
@@ -227,6 +244,25 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     height: 240,
+  },
+  // 活动标签
+  activitiesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  activityChip: {
+    backgroundColor: Colors.primary + '10',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  activityChipText: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '500',
   },
   // 文字
   noteCard: {

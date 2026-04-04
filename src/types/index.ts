@@ -1,6 +1,9 @@
 // 心情类型：8种心情
 export type MoodType = 'amazing' | 'happy' | 'good' | 'calm' | 'neutral' | 'anxious' | 'sad' | 'angry';
 
+// 活动标签
+export type ActivityTag = string;
+
 // 一条心情记录的完整数据
 export interface Entry {
   id: string;
@@ -8,6 +11,7 @@ export interface Entry {
   emoji: string;
   note: string | null;
   photoUri: string | null;
+  activities: string | null; // JSON array of activity tags
   latitude: number;
   longitude: number;
   address: string | null;
@@ -15,12 +19,13 @@ export interface Entry {
   updatedAt: string;
 }
 
-// 创建新记录时需要的数据（不含id和时间戳）
+// 创建新记录时需要的数据
 export interface NewEntry {
   mood: MoodType;
   emoji: string;
   note?: string;
   photoUri?: string;
+  activities?: string[];
   latitude: number;
   longitude: number;
   address?: string;
@@ -32,6 +37,13 @@ export interface MoodOption {
   emoji: string;
   label: string;
   color: string;
+}
+
+// 预设活动选项
+export interface ActivityOption {
+  id: string;
+  icon: string;
+  label: string;
 }
 
 // 用户位置
