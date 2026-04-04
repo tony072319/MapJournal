@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity, PanResponder, Animated } from 'react-native';
-import { Colors } from '../constants/colors';
+import { Colors, MoodColors } from '../constants/colors';
 import { UserLocation } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -164,6 +164,34 @@ export const TileMap: React.FC<Props> = ({
             resizeMode="cover"
           />
         ))}
+
+        {/* 心情路径连线 — Polarsteps 风格 */}
+        {markerPositions.length >= 2 &&
+          markerPositions.slice(0, -1).map((m, i) => {
+            const next = markerPositions[i + 1];
+            const dx = next.px - m.px;
+            const dy = next.py - m.py;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (length > 500) return null; // 太远的不连
+            return (
+              <View
+                key={`path-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: m.px,
+                  top: m.py - 1,
+                  width: length,
+                  height: 2,
+                  backgroundColor: Colors.primary + '25',
+                  transform: [{ rotate: `${angle}deg` }],
+                  transformOrigin: 'left center',
+                  zIndex: 1,
+                  borderRadius: 1,
+                }}
+              />
+            );
+          })}
 
         {/* 心情标记 */}
         {markerPositions.map((m) => (
