@@ -12,6 +12,7 @@ import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodChart } from '../components/MoodChart';
 import { MoodCalendar } from '../components/MoodCalendar';
 import { EntryDetail } from '../components/EntryDetail';
+import { ACTIVITY_OPTIONS } from '../constants/activities';
 import { MoodType, Entry } from '../types';
 import dayjs from 'dayjs';
 
@@ -75,6 +76,26 @@ export const StatsScreen: React.FC = () => {
   const photoCount = useMemo(() => {
     return entries.filter((e) => e.photoUri).length;
   }, [entries]);
+
+  // 最常做的活动 Top 5
+  const topActivities = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredEntries.forEach((e) => {
+      if (e.activities) {
+        try {
+          const acts = JSON.parse(e.activities) as string[];
+          acts.forEach((a) => { counts[a] = (counts[a] || 0) + 1; });
+        } catch {}
+      }
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, count]) => {
+        const opt = ACTIVITY_OPTIONS.find((o) => o.id === id);
+        return { id, count, icon: opt?.icon || '📌', label: opt?.label || id };
+      });
+  }, [filteredEntries]);
 
   if (entries.length === 0) {
     return (
@@ -192,6 +213,21 @@ export const StatsScreen: React.FC = () => {
           );
         })}
       </View>
+
+      {/* 最常做的活动 */}
+      {topActivities.length > 0 && (
+        <View style={styles.activitiesCard}>
+          <Text style={styles.chartTitle}>常见活动</Text>
+          {topActivities.map((act, i) => (
+            <View key={act.id} style={styles.activityRow}>
+              <Text style={styles.activityRank}>{i + 1}</Text>
+              <Text style={styles.activityIcon}>{act.icon}</Text>
+              <Text style={styles.activityLabel}>{act.label}</Text>
+              <Text style={styles.activityCount}>{act.count}次</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
 
     <EntryDetail
@@ -406,5 +442,45 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     width: 36,
     textAlign: 'right',
+  },
+  // 活动统计
+  activitiesCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 16,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  activityRank: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    width: 20,
+  },
+  activityIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  activityLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  activityCount: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });
