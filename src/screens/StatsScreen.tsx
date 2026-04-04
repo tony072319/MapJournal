@@ -10,6 +10,7 @@ import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
 import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodChart } from '../components/MoodChart';
+import { MoodInsight } from '../components/MoodInsight';
 import { MoodCalendar } from '../components/MoodCalendar';
 import { YearPixels } from '../components/YearPixels';
 import { EntryDetail } from '../components/EntryDetail';
@@ -214,6 +215,9 @@ export const StatsScreen: React.FC = () => {
           );
         })}
       </View>
+
+      {/* 心情洞察 — Daylio 风格的活动-心情关联 */}
+      <MoodInsight entries={filteredEntries} />
 
       {/* 年度像素 — Pixels/Year in Color 风格 */}
       <YearPixels entries={entries} />
