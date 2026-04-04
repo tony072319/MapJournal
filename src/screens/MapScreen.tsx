@@ -17,6 +17,7 @@ import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
 import { QuickMoodBar } from '../components/QuickMoodBar';
+import { StreakBanner } from '../components/StreakBanner';
 import { Entry, MoodType } from '../types';
 import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
@@ -112,6 +113,9 @@ export const MapScreen: React.FC = () => {
             {entries.length === 0 ? '还没有心情记录' : `最近的心情`}
           </Text>
         </TouchableOpacity>
+
+        {/* 连续记录 + 7天打卡 */}
+        <StreakBanner entries={entries} />
 
         {/* 面板内容 */}
         {panelExpanded && (
@@ -258,7 +262,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 80,
-    maxHeight: 120,
+    maxHeight: 190,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
@@ -336,7 +340,7 @@ const styles = StyleSheet.create({
   // 快速记录栏
   quickBarContainer: {
     position: 'absolute',
-    bottom: 130,
+    bottom: 200,
     left: 20,
     right: 20,
   },
