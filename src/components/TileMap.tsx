@@ -1,12 +1,14 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity, PanResponder } from 'react-native';
+import React, { useMemo, useState, useRef } from 'react';
+import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity, PanResponder, Animated } from 'react-native';
 import { Colors } from '../constants/colors';
 import { UserLocation } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-// 经纬度 → OSM瓦片坐标
+// 更美观的地图瓦片源 — CartoDB Voyager（干净、现代、彩色）
+const TILE_URL = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+
 const latLngToTile = (lat: number, lng: number, zoom: number) => {
   const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
   const latRad = (lat * Math.PI) / 180;
@@ -17,14 +19,9 @@ const latLngToTile = (lat: number, lng: number, zoom: number) => {
   return { x, y };
 };
 
-// 经纬度 → 像素偏移
 const latLngToPixel = (
-  lat: number,
-  lng: number,
-  zoom: number,
-  originTileX: number,
-  originTileY: number,
-  tileDisplaySize: number
+  lat: number, lng: number, zoom: number,
+  originTileX: number, originTileY: number, tileDisplaySize: number
 ) => {
   const totalTiles = Math.pow(2, zoom);
   const scale = tileDisplaySize / TILE_SIZE;
@@ -33,11 +30,10 @@ const latLngToPixel = (
   const pixelY =
     ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
     totalTiles * TILE_SIZE * scale;
-
-  const gridOriginX = originTileX * TILE_SIZE * scale;
-  const gridOriginY = originTileY * TILE_SIZE * scale;
-
-  return { x: pixelX - gridOriginX, y: pixelY - gridOriginY };
+  return {
+    x: pixelX - originTileX * TILE_SIZE * scale,
+    y: pixelY - originTileY * TILE_SIZE * scale,
+  };
 };
 
 interface MarkerData {
@@ -52,7 +48,7 @@ interface Props {
   location: UserLocation;
   markers?: MarkerData[];
   onMarkerPress?: (id: string) => void;
-  fullscreen?: boolean;
+  height?: number;
   zoom?: number;
 }
 
@@ -60,40 +56,49 @@ export const TileMap: React.FC<Props> = ({
   location,
   markers = [],
   onMarkerPress,
-  fullscreen = false,
-  zoom = 15,
+  height = SCREEN_HEIGHT,
+  zoom: initialZoom = 15,
 }) => {
-  const mapHeight = fullscreen ? SCREEN_HEIGHT : 300;
-  const GRID = fullscreen ? 5 : 3;
+  const GRID = 5;
+  const EXTRA = 2;
   const tileDisplaySize = SCREEN_WIDTH / GRID;
 
-  // 拖拽偏移状态
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(initialZoom);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const lastOffset = useRef({ x: 0, y: 0 });
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gs) =>
-          Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
-        onPanResponderMove: (_, gs) => {
-          setPanOffset((prev) => ({
-            x: prev.x + gs.dx * 0.3,
-            y: prev.y + gs.dy * 0.3,
-          }));
+          Math.abs(gs.dx) > 3 || Math.abs(gs.dy) > 3,
+        onPanResponderGrant: () => {
+          lastOffset.current = { ...offset };
         },
-        onPanResponderRelease: () => {},
+        onPanResponderMove: (_, gs) => {
+          setOffset({
+            x: lastOffset.current.x + gs.dx,
+            y: lastOffset.current.y + gs.dy,
+          });
+        },
       }),
-    []
+    [offset]
   );
+
+  const recenter = () => {
+    setOffset({ x: 0, y: 0 });
+    setZoom(initialZoom);
+  };
+
+  const zoomIn = () => setZoom((z) => Math.min(z + 1, 18));
+  const zoomOut = () => setZoom((z) => Math.max(z - 1, 10));
 
   const centerTile = useMemo(
     () => latLngToTile(location.latitude, location.longitude, zoom),
     [location, zoom]
   );
 
-  // 生成瓦片网格 (扩大一圈以覆盖拖拽)
-  const EXTRA = 1;
   const tiles = useMemo(() => {
     const result: { x: number; y: number; row: number; col: number }[] = [];
     const half = Math.floor(GRID / 2);
@@ -102,51 +107,52 @@ export const TileMap: React.FC<Props> = ({
         result.push({
           x: centerTile.x - half + col,
           y: centerTile.y - half + row,
-          row,
-          col,
+          row, col,
         });
       }
     }
     return result;
   }, [centerTile, GRID]);
 
-  const originTileX = centerTile.x - Math.floor(GRID / 2);
-  const originTileY = centerTile.y - Math.floor(GRID / 2);
+  const originTileX = centerTile.x - Math.floor(GRID / 2) - EXTRA;
+  const originTileY = centerTile.y - Math.floor(GRID / 2) - EXTRA;
 
-  // 用户位置像素
   const userPixel = useMemo(
     () => latLngToPixel(location.latitude, location.longitude, zoom, originTileX, originTileY, tileDisplaySize),
     [location, zoom, originTileX, originTileY, tileDisplaySize]
   );
 
-  // 标记像素位置
   const markerPositions = useMemo(() => {
     return markers.map((m) => {
-      const pixel = latLngToPixel(m.latitude, m.longitude, zoom, originTileX, originTileY, tileDisplaySize);
-      return { ...m, px: pixel.x, py: pixel.y };
+      const p = latLngToPixel(m.latitude, m.longitude, zoom, originTileX, originTileY, tileDisplaySize);
+      return { ...m, px: p.x, py: p.y };
     });
   }, [markers, zoom, originTileX, originTileY, tileDisplaySize]);
 
+  const totalGridW = (GRID + EXTRA * 2) * tileDisplaySize;
+  const totalGridH = totalGridW;
+
+  // 瓦片层居中偏移
+  const baseLeft = (SCREEN_WIDTH - totalGridW) / 2;
+  const baseTop = (height - totalGridH) / 2;
+
   return (
-    <View style={[styles.container, { height: mapHeight }]} {...panResponder.panHandlers}>
+    <View style={[styles.container, { height }]} {...panResponder.panHandlers}>
       {/* 瓦片层 */}
       <View
-        style={[
-          styles.tileLayer,
-          {
-            width: (GRID + EXTRA * 2) * tileDisplaySize,
-            height: (GRID + EXTRA * 2) * tileDisplaySize,
-            left: -EXTRA * tileDisplaySize + panOffset.x,
-            top: -EXTRA * tileDisplaySize + panOffset.y,
-          },
-        ]}
+        style={{
+          position: 'absolute',
+          width: totalGridW,
+          height: totalGridH,
+          left: baseLeft + offset.x,
+          top: baseTop + offset.y,
+        }}
       >
         {tiles.map((tile) => (
           <Image
-            key={`${tile.x}-${tile.y}`}
+            key={`${zoom}-${tile.x}-${tile.y}`}
             source={{
-              uri: `https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png`,
-              headers: { 'User-Agent': 'MapJournal/1.0' },
+              uri: TILE_URL.replace('{z}', String(zoom)).replace('{x}', String(tile.x)).replace('{y}', String(tile.y)),
             }}
             style={{
               position: 'absolute',
@@ -166,8 +172,8 @@ export const TileMap: React.FC<Props> = ({
             style={[
               styles.marker,
               {
-                left: m.px + EXTRA * tileDisplaySize - 18,
-                top: m.py + EXTRA * tileDisplaySize - 18,
+                left: m.px - 20,
+                top: m.py - 20,
                 borderColor: m.moodColor,
               },
             ]}
@@ -179,21 +185,28 @@ export const TileMap: React.FC<Props> = ({
         ))}
 
         {/* 用户位置蓝点 */}
-        <View
-          style={[
-            styles.userDotOuter,
-            {
-              left: userPixel.x + EXTRA * tileDisplaySize - 12,
-              top: userPixel.y + EXTRA * tileDisplaySize - 12,
-            },
-          ]}
-        >
-          <View style={styles.userDotInner} />
-        </View>
+        <View style={[styles.userPulse, { left: userPixel.x - 16, top: userPixel.y - 16 }]} />
+        <View style={[styles.userDot, { left: userPixel.x - 8, top: userPixel.y - 8 }]} />
       </View>
 
-      {/* OSM归属 */}
-      <Text style={styles.attribution}>© OpenStreetMap</Text>
+      {/* 缩放 + 定位按钮 */}
+      <View style={styles.controls}>
+        <TouchableOpacity style={styles.controlBtn} onPress={zoomIn} activeOpacity={0.7}>
+          <Text style={styles.controlText}>+</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.controlBtn} onPress={zoomOut} activeOpacity={0.7}>
+          <Text style={styles.controlText}>−</Text>
+        </TouchableOpacity>
+        <View style={styles.controlSpacer} />
+        <TouchableOpacity style={styles.controlBtn} onPress={recenter} activeOpacity={0.7}>
+          <View style={styles.recenterIcon}>
+            <View style={styles.recenterDot} />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* 归属 */}
+      <Text style={styles.attribution}>© OpenStreetMap © CARTO</Text>
     </View>
   );
 };
@@ -201,53 +214,102 @@ export const TileMap: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: '#E8E4DF',
+    backgroundColor: '#F2EFE9',
   },
-  tileLayer: {
+  // 用户位置
+  userPulse: {
     position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    zIndex: 19,
   },
-  userDotOuter: {
+  userDot: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-  },
-  userDotInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#6366F1',
-    borderWidth: 2.5,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
+    zIndex: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
   },
+  // 标记
   marker: {
     position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2.5,
+    borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 5,
     zIndex: 10,
   },
   markerEmoji: {
-    fontSize: 18,
+    fontSize: 20,
+  },
+  // 控制按钮
+  controls: {
+    position: 'absolute',
+    right: 16,
+    top: 100,
+    alignItems: 'center',
+  },
+  controlBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  controlText: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: '#1C1917',
+    marginTop: -1,
+  },
+  controlSpacer: {
+    height: 8,
+  },
+  recenterIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recenterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#6366F1',
   },
   attribution: {
     position: 'absolute',
     bottom: 6,
-    right: 10,
+    left: 10,
     fontSize: 9,
-    color: 'rgba(0,0,0,0.35)',
+    color: 'rgba(0,0,0,0.3)',
   },
 });

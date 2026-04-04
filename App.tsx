@@ -65,38 +65,49 @@ function TabBar({
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabName>('map');
+  const isMapTab = activeTab === 'map';
 
   return (
     <EntriesProvider>
-      <SafeAreaView style={styles.container}>
-        {/* Header for non-map tabs */}
-        {activeTab !== 'map' && (
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>
-              {activeTab === 'timeline' ? '心情时间线' : '心情统计'}
-            </Text>
+      <View style={styles.root}>
+        {/* 地图Tab：全屏无安全区域 */}
+        {isMapTab && (
+          <View style={styles.content}>
+            <MapScreen />
           </View>
         )}
 
-        {/* Screen content */}
-        <View style={styles.content}>
-          {activeTab === 'map' && <MapScreen />}
-          {activeTab === 'timeline' && <TimelineScreen />}
-          {activeTab === 'stats' && <StatsScreen />}
-        </View>
+        {/* 其他Tab：有安全区域和标题 */}
+        {!isMapTab && (
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>
+                {activeTab === 'timeline' ? '心情时间线' : '心情统计'}
+              </Text>
+            </View>
+            <View style={styles.content}>
+              {activeTab === 'timeline' && <TimelineScreen />}
+              {activeTab === 'stats' && <StatsScreen />}
+            </View>
+          </SafeAreaView>
+        )}
 
         {/* Tab bar */}
         <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
-        <StatusBar style="dark" />
-      </SafeAreaView>
+        <StatusBar style={isMapTab ? 'dark' : 'dark'} />
+      </View>
     </EntriesProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: Colors.card,
+    backgroundColor: Colors.background,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -118,11 +129,11 @@ const styles = StyleSheet.create({
 const tabStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255,255,255,0.97)',
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 4 : 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
   },
   tab: {
     flex: 1,

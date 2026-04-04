@@ -83,7 +83,6 @@ export const MapScreen: React.FC = () => {
           moodColor: MoodColors[e.mood as MoodType] || Colors.primary,
         }))}
         onMarkerPress={handleMarkerPress}
-        fullscreen
         zoom={15}
       />
 
