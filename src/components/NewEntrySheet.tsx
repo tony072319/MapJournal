@@ -34,7 +34,6 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
   const [address, setAddress] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
 
-  // 打开时自动反向地理编码获取地址
   useEffect(() => {
     if (visible && location) {
       reverseGeocode();
@@ -51,8 +50,7 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
       if (results.length > 0) {
         const r = results[0];
         const parts = [r.name, r.street, r.district, r.city].filter(Boolean);
-        const addr = parts.length > 0 ? parts.join(', ') : null;
-        setAddress(addr);
+        setAddress(parts.length > 0 ? parts.join(', ') : null);
       }
     } catch {
       setAddress(null);
@@ -68,19 +66,16 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
 
   const handleSave = async () => {
     if (!mood) return;
-
     setSaving(true);
     try {
       await addEntry({
-        mood,
-        emoji,
+        mood, emoji,
         note: note.trim() || undefined,
         photoUri: photoUri || undefined,
         latitude: location.latitude,
         longitude: location.longitude,
         address: address || undefined,
       });
-
       resetForm();
       onClose();
     } catch (error) {
@@ -103,9 +98,6 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
     onClose();
   };
 
-  // 已完成的步骤数（用于进度指示）
-  const stepsCompleted = [mood !== null, photoUri !== null, note.trim().length > 0].filter(Boolean).length;
-
   return (
     <Modal
       visible={visible}
@@ -119,30 +111,16 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
       >
         {/* 头部 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} accessibilityLabel="取消" accessibilityRole="button">
+          <TouchableOpacity onPress={handleClose}>
             <Text style={styles.cancelText}>取消</Text>
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>记录心情</Text>
-            {/* 进度指示点 */}
-            <View style={styles.progressDots}>
-              {[0, 1, 2].map((i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i < stepsCompleted && styles.dotCompleted]}
-                />
-              ))}
-            </View>
-          </View>
           <TouchableOpacity
             onPress={handleSave}
             disabled={!mood || saving}
-            style={[styles.saveButton, (!mood || saving) && styles.saveButtonDisabled]}
-            accessibilityLabel="保存心情记录"
-            accessibilityRole="button"
+            style={[styles.saveButton, (!mood || saving) ? styles.saveButtonDisabled : undefined]}
           >
             <Text
-              style={[styles.saveText, (!mood || saving) && styles.saveTextDisabled]}
+              style={[styles.saveText, (!mood || saving) ? styles.saveTextDisabled : undefined]}
             >
               {saving ? '保存中...' : '保存'}
             </Text>
@@ -157,7 +135,7 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
         >
           {/* 位置信息 */}
           <View style={styles.locationBar}>
-            <Text style={styles.locationIcon}>📍</Text>
+            <View style={styles.locationDot} />
             {geocoding ? (
               <ActivityIndicator size="small" color={Colors.textSecondary} />
             ) : (
@@ -167,25 +145,22 @@ export const NewEntrySheet: React.FC<Props> = ({ visible, onClose, location }) =
             )}
           </View>
 
-          {/* 心情选择 */}
+          {/* 问题式流程 */}
           <MoodPicker selected={mood} onSelect={handleMoodSelect} />
 
-          {/* 照片 */}
           <PhotoPicker photoUri={photoUri} onPhotoPicked={setPhotoUri} />
 
-          {/* 文字描述 */}
           <View style={styles.noteSection}>
-            <Text style={styles.noteTitle}>写点什么（可选）</Text>
+            <Text style={styles.noteTitle}>这一刻发生了什么？</Text>
             <TextInput
-              style={[styles.noteInput, note.length > 0 && styles.noteInputActive]}
-              placeholder="此刻的想法..."
+              style={[styles.noteInput, note.length > 0 ? styles.noteInputActive : undefined]}
+              placeholder="写下你的想法..."
               placeholderTextColor={Colors.textSecondary}
               multiline
               textAlignVertical="top"
               value={note}
               onChangeText={setNote}
               maxLength={500}
-              accessibilityLabel="心情文字描述"
             />
             <Text style={styles.charCount}>{note.length}/500</Text>
           </View>
@@ -204,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -212,37 +187,12 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     color: Colors.textSecondary,
-    width: 56,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  progressDots: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.border,
-  },
-  dotCompleted: {
-    backgroundColor: Colors.primary,
   },
   saveButton: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
     borderRadius: 20,
-    minWidth: 56,
-    alignItems: 'center',
   },
   saveButtonDisabled: {
     backgroundColor: Colors.border,
@@ -266,13 +216,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.background,
     borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 20,
-    gap: 8,
+    marginBottom: 24,
   },
-  locationIcon: {
-    fontSize: 14,
+  locationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginRight: 10,
   },
   locationText: {
     fontSize: 13,
@@ -284,14 +237,14 @@ const styles = StyleSheet.create({
   },
   noteTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.text,
     marginBottom: 12,
   },
   noteInput: {
     backgroundColor: Colors.background,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 15,
     color: Colors.text,
     minHeight: 100,

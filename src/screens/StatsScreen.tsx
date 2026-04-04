@@ -10,7 +10,9 @@ import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
 import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodChart } from '../components/MoodChart';
-import { MoodType } from '../types';
+import { MoodCalendar } from '../components/MoodCalendar';
+import { EntryDetail } from '../components/EntryDetail';
+import { MoodType, Entry } from '../types';
 import dayjs from 'dayjs';
 
 type Period = 'week' | 'month' | 'all';
@@ -18,6 +20,13 @@ type Period = 'week' | 'month' | 'all';
 export const StatsScreen: React.FC = () => {
   const { entries } = useEntries();
   const [period, setPeriod] = useState<Period>('week');
+  const [selectedDayEntry, setSelectedDayEntry] = useState<Entry | null>(null);
+
+  const handleDayPress = (_date: string, dayEntries: Entry[]) => {
+    if (dayEntries.length > 0) {
+      setSelectedDayEntry(dayEntries[0]);
+    }
+  };
 
   const filteredEntries = useMemo(() => {
     if (period === 'all') return entries;
@@ -82,6 +91,7 @@ export const StatsScreen: React.FC = () => {
   }
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -103,6 +113,9 @@ export const StatsScreen: React.FC = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* 心情日历 */}
+      <MoodCalendar entries={entries} onDayPress={handleDayPress} />
 
       {/* 总览数据行 */}
       <View style={styles.overviewRow}>
@@ -180,6 +193,12 @@ export const StatsScreen: React.FC = () => {
         })}
       </View>
     </ScrollView>
+
+    <EntryDetail
+      entry={selectedDayEntry}
+      onClose={() => setSelectedDayEntry(null)}
+    />
+    </>
   );
 };
 

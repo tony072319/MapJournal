@@ -12,9 +12,10 @@ interface Props {
 export const MoodPicker: React.FC<Props> = ({ selected, onSelect }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>你现在的心情是？</Text>
+      <Text style={styles.title}>你现在感觉怎么样？</Text>
+      {/* 第一行: 4个 */}
       <View style={styles.row}>
-        {MOOD_OPTIONS.map((mood) => {
+        {MOOD_OPTIONS.slice(0, 4).map((mood) => {
           const isSelected = selected === mood.type;
           return (
             <TouchableOpacity
@@ -24,15 +25,42 @@ export const MoodPicker: React.FC<Props> = ({ selected, onSelect }) => {
                 isSelected ? {
                   backgroundColor: mood.color + '15',
                   borderColor: mood.color,
-                  shadowColor: mood.color,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 8,
-                  elevation: 4,
                 } : undefined,
               ]}
               onPress={() => onSelect(mood.type, mood.emoji)}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.emoji, isSelected ? styles.emojiSelected : undefined]}>
+                {mood.emoji}
+              </Text>
+              <Text
+                style={[
+                  styles.label,
+                  isSelected ? { color: mood.color, fontWeight: '700' } : undefined,
+                ]}
+              >
+                {mood.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {/* 第二行: 4个 */}
+      <View style={styles.row}>
+        {MOOD_OPTIONS.slice(4).map((mood) => {
+          const isSelected = selected === mood.type;
+          return (
+            <TouchableOpacity
+              key={mood.type}
+              style={[
+                styles.option,
+                isSelected ? {
+                  backgroundColor: mood.color + '15',
+                  borderColor: mood.color,
+                } : undefined,
+              ]}
+              onPress={() => onSelect(mood.type, mood.emoji)}
+              activeOpacity={0.6}
             >
               <Text style={[styles.emoji, isSelected ? styles.emojiSelected : undefined]}>
                 {mood.emoji}
@@ -66,26 +94,28 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   option: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    borderRadius: 16,
+    paddingVertical: 10,
+    marginHorizontal: 3,
+    borderRadius: 14,
     borderWidth: 2,
-    borderColor: 'transparent',
-    minWidth: 58,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
   },
   emoji: {
-    fontSize: 30,
+    fontSize: 26,
   },
   emojiSelected: {
-    fontSize: 34,
+    fontSize: 30,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 6,
+    marginTop: 4,
     fontWeight: '500',
   },
 });

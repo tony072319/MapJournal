@@ -12,21 +12,27 @@ interface Props {
 }
 
 const moodToValue: Record<string, number> = {
-  happy: 5, good: 4, neutral: 3, sad: 2, angry: 1,
+  amazing: 8, happy: 7, good: 6, calm: 5, neutral: 4, anxious: 3, sad: 2, angry: 1,
 };
 
 const getColorForValue = (val: number): string => {
-  if (val >= 4.5) return MoodColors.happy;
-  if (val >= 3.5) return MoodColors.good;
-  if (val >= 2.5) return MoodColors.neutral;
+  if (val >= 7.5) return MoodColors.amazing;
+  if (val >= 6.5) return MoodColors.happy;
+  if (val >= 5.5) return MoodColors.good;
+  if (val >= 4.5) return MoodColors.calm;
+  if (val >= 3.5) return MoodColors.neutral;
+  if (val >= 2.5) return MoodColors.anxious;
   if (val >= 1.5) return MoodColors.sad;
   return MoodColors.angry;
 };
 
 const getEmojiForValue = (val: number): string => {
-  if (val >= 4.5) return '😄';
-  if (val >= 3.5) return '😊';
-  if (val >= 2.5) return '😐';
+  if (val >= 7.5) return '🤩';
+  if (val >= 6.5) return '😄';
+  if (val >= 5.5) return '😊';
+  if (val >= 4.5) return '😌';
+  if (val >= 3.5) return '😐';
+  if (val >= 2.5) return '😰';
   if (val >= 1.5) return '😢';
   return '😠';
 };
@@ -51,7 +57,7 @@ export const MoodChart: React.FC<Props> = ({ entries }) => {
   const hasData = dailyData.some((v) => v !== null);
 
   const valueToPixels = (val: number): number => {
-    return ((val - 1) / 4) * (CHART_HEIGHT - DOT_SIZE);
+    return ((val - 1) / 7) * (CHART_HEIGHT - DOT_SIZE);
   };
 
   return (

@@ -1,5 +1,5 @@
-// 心情类型：5种基本心情
-export type MoodType = 'happy' | 'good' | 'neutral' | 'sad' | 'angry';
+// 心情类型：8种心情
+export type MoodType = 'amazing' | 'happy' | 'good' | 'calm' | 'neutral' | 'anxious' | 'sad' | 'angry';
 
 // 一条心情记录的完整数据
 export interface Entry {
@@ -33,9 +33,6 @@ export interface MoodOption {
   label: string;
   color: string;
 }
-
-// 地图样式类型
-export type MapStyleType = 'standard' | 'satellite' | 'dark';
 
 // 用户位置
 export interface UserLocation {
