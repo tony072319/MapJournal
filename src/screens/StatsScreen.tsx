@@ -11,10 +11,12 @@ import { Colors, MoodColors } from '../constants/colors';
 import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodChart } from '../components/MoodChart';
 import { MoodInsight } from '../components/MoodInsight';
+import { Achievements } from '../components/Achievements';
 import { MoodCalendar } from '../components/MoodCalendar';
 import { YearPixels } from '../components/YearPixels';
 import { EntryDetail } from '../components/EntryDetail';
 import { ACTIVITY_OPTIONS } from '../constants/activities';
+import { exportEntriesAsCSV } from '../utils/exportData';
 import { MoodType, Entry } from '../types';
 import dayjs from 'dayjs';
 
@@ -216,11 +218,24 @@ export const StatsScreen: React.FC = () => {
         })}
       </View>
 
-      {/* 心情洞察 — Daylio 风格的活动-心情关联 */}
+      {/* 心情洞察 */}
       <MoodInsight entries={filteredEntries} />
+
+      {/* 成就徽章 — Daylio 风格 */}
+      <Achievements entries={entries} />
 
       {/* 年度像素 — Pixels/Year in Color 风格 */}
       <YearPixels entries={entries} />
+
+      {/* 导出数据 */}
+      <TouchableOpacity
+        style={styles.exportButton}
+        onPress={() => exportEntriesAsCSV(entries)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.exportIcon}>📤</Text>
+        <Text style={styles.exportText}>导出心情数据 (CSV)</Text>
+      </TouchableOpacity>
 
       {/* 最常做的活动 */}
       {topActivities.length > 0 && (
@@ -450,6 +465,27 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     width: 36,
     textAlign: 'right',
+  },
+  // 导出
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  exportIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  exportText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   // 活动统计
   activitiesCard: {

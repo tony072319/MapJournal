@@ -18,6 +18,7 @@ import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
 import { QuickMoodBar } from '../components/QuickMoodBar';
 import { StreakBanner } from '../components/StreakBanner';
+import { MapTimeline } from '../components/MapTimeline';
 import { Entry, MoodType } from '../types';
 import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
@@ -117,15 +118,18 @@ export const MapScreen: React.FC = () => {
         {/* 收起时：连续记录 + 7天打卡 */}
         {!panelExpanded && <StreakBanner entries={entries} />}
 
-        {/* 展开时：最近记录列表 */}
+        {/* 展开时：横向时间轴 + 列表 */}
         {panelExpanded && (
           <ScrollView
             style={styles.panelScroll}
             showsVerticalScrollIndicator={false}
           >
+            {/* 横向时间轴卡片 — Polarsteps 风格 */}
+            <MapTimeline entries={entries} onEntryPress={(e) => setSelectedEntry(e)} />
+
             {entries.length === 0 && (
               <Text style={styles.panelEmpty}>
-                点击下方 "+" 在当前位置记录你的心情
+                点击快速记录栏开始记录心情
               </Text>
             )}
 
