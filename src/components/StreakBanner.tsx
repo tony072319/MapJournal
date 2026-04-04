@@ -8,7 +8,6 @@ interface Props {
   entries: Entry[];
 }
 
-// 连续记录天数 banner — 显示在地图页底部面板
 export const StreakBanner: React.FC<Props> = ({ entries }) => {
   const { streak, todayRecorded } = useMemo(() => {
     if (entries.length === 0) return { streak: 0, todayRecorded: false };
@@ -32,9 +31,6 @@ export const StreakBanner: React.FC<Props> = ({ entries }) => {
     return { streak: count, todayRecorded: hasToday };
   }, [entries]);
 
-  if (entries.length === 0) return null;
-
-  // 最近7天的记录情况
   const last7 = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const date = dayjs().subtract(6 - i, 'day').format('YYYY-MM-DD');
@@ -42,6 +38,8 @@ export const StreakBanner: React.FC<Props> = ({ entries }) => {
       return { date, hasEntry: !!entry, emoji: entry?.emoji };
     });
   }, [entries]);
+
+  if (entries.length === 0) return null;
 
   return (
     <View style={styles.container}>
@@ -51,16 +49,15 @@ export const StreakBanner: React.FC<Props> = ({ entries }) => {
           <Text style={styles.streakNumber}>
             {streak > 0 ? `${streak} 天连续记录` : '今天还没记录'}
           </Text>
-          {!todayRecorded && streak > 0 && (
+          {!todayRecorded && streak > 0 ? (
             <Text style={styles.streakHint}>记录一下保持连续！</Text>
-          )}
-          {todayRecorded && (
+          ) : null}
+          {todayRecorded ? (
             <Text style={styles.streakDone}>今天已打卡 ✓</Text>
-          )}
+          ) : null}
         </View>
       </View>
 
-      {/* 最近7天点阵 */}
       <View style={styles.weekDots}>
         {last7.map((day, i) => (
           <View key={i} style={styles.weekDay}>
