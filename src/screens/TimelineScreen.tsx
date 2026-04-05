@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useEntries } from '../context/EntriesContext';
 import { EntryDetail } from '../components/EntryDetail';
-import { MoodFilter } from '../components/MoodFilter';
+import { TimelineFilters } from '../components/TimelineFilters';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
 import { ACTIVITY_OPTIONS } from '../constants/activities';
@@ -94,6 +94,8 @@ export const TimelineScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   const handleToggleMoodFilter = (mood: MoodType) => {
     setMoodFilters((prev) =>
@@ -103,9 +105,25 @@ export const TimelineScreen: React.FC = () => {
 
   const sections: Section[] = useMemo(() => {
     let filtered = entries;
+
+    // 时段筛选
+    if (period !== 'all') {
+      const now = dayjs();
+      const start = period === 'week' ? now.subtract(7, 'day') : now.subtract(30, 'day');
+      filtered = filtered.filter((e) => dayjs(e.createdAt).isAfter(start));
+    }
+
+    // 城市筛选
+    if (selectedCity) {
+      filtered = filtered.filter((e) => e.address && e.address.includes(selectedCity));
+    }
+
+    // 心情筛选
     if (moodFilters.length > 0) {
       filtered = filtered.filter((e) => moodFilters.includes(e.mood as MoodType));
     }
+
+    // 文本搜索
     if (searchText.trim()) {
       const q = searchText.toLowerCase();
       filtered = filtered.filter((e) =>
@@ -131,7 +149,7 @@ export const TimelineScreen: React.FC = () => {
       data,
       count: data.length,
     }));
-  }, [entries, moodFilters, searchText]);
+  }, [entries, moodFilters, searchText, period, selectedCity]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -164,7 +182,6 @@ export const TimelineScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
-            {/* 搜索栏 */}
             <TextInput
               style={styles.searchInput}
               placeholder="搜索心情、地点、活动..."
@@ -173,10 +190,15 @@ export const TimelineScreen: React.FC = () => {
               onChangeText={setSearchText}
               clearButtonMode="while-editing"
             />
-            <MoodFilter
-              activeFilters={moodFilters}
-              onToggle={handleToggleMoodFilter}
-              onClear={() => setMoodFilters([])}
+            <TimelineFilters
+              entries={entries}
+              period={period}
+              onPeriodChange={setPeriod}
+              selectedCity={selectedCity}
+              onCityChange={setSelectedCity}
+              moodFilters={moodFilters}
+              onMoodToggle={handleToggleMoodFilter}
+              onMoodClear={() => setMoodFilters([])}
             />
           </View>
         }
