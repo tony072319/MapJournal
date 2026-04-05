@@ -14,6 +14,7 @@ import { MoodInsight } from '../components/MoodInsight';
 import { YearPixels } from '../components/YearPixels';
 import { TopLocations } from '../components/TopLocations';
 import { LocationMoodCorrelation } from '../components/LocationMoodCorrelation';
+import { MoodTimeOfDay } from '../components/MoodTimeOfDay';
 import { Achievements } from '../components/Achievements';
 
 export const AboutMeScreen: React.FC = () => {
@@ -100,6 +101,8 @@ export const AboutMeScreen: React.FC = () => {
           <TopLocations entries={entries} />
 
           <LocationMoodCorrelation entries={entries} />
+
+          <MoodTimeOfDay entries={entries} />
 
           <MoodCalendar entries={entries} onDayPress={() => {}} />
 

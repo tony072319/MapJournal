@@ -15,6 +15,7 @@ import { TimelineFilters } from '../components/TimelineFilters';
 import { Colors, MoodColors } from '../constants/colors';
 import { getMoodByType } from '../constants/moods';
 import { ACTIVITY_OPTIONS } from '../constants/activities';
+import { DailyPrompt } from '../components/DailyPrompt';
 import { formatRelative, formatShortDate } from '../utils/dateFormat';
 import { Entry, MoodType } from '../types';
 import dayjs from 'dayjs';
@@ -185,6 +186,11 @@ export const TimelineScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
+            <DailyPrompt
+              hasRecordedToday={entries.some((e) =>
+                dayjs(e.createdAt).isSame(dayjs(), 'day')
+              )}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="搜索心情、地点、活动..."
