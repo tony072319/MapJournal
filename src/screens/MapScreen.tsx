@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Text,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
@@ -16,6 +15,7 @@ import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
 import { QuickRecordPanel } from '../components/QuickRecordPanel';
 import { LocationTimeline } from '../components/LocationTimeline';
+import { FriendsModal } from '../components/FriendsModal';
 import { getEntriesNearLocation, clusterEntriesByLocation } from '../utils/locationCluster';
 import { Entry, MoodType } from '../types';
 import AsyncStorage from '../utils/storage';
@@ -29,6 +29,7 @@ export const MapScreen: React.FC = () => {
   const [locationTimelineEntries, setLocationTimelineEntries] = useState<Entry[]>([]);
   const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
   const [showLocationTimeline, setShowLocationTimeline] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
 
   useEffect(() => {
     try {
@@ -71,11 +72,7 @@ export const MapScreen: React.FC = () => {
   }, [entries]);
 
   const handleFriendPress = () => {
-    Alert.alert(
-      '好友功能',
-      '此功能需要网络连接，即将在后续版本中推出！',
-      [{ text: '好的', style: 'default' }]
-    );
+    setShowFriends(true);
   };
 
   if (loading) {
@@ -160,6 +157,11 @@ export const MapScreen: React.FC = () => {
       <EntryDetail
         entry={selectedEntry}
         onClose={() => setSelectedEntry(null)}
+      />
+
+      <FriendsModal
+        visible={showFriends}
+        onClose={() => setShowFriends(false)}
       />
     </View>
   );

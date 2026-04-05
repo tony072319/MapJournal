@@ -1,12 +1,11 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity, PanResponder, Animated } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, Text, TouchableOpacity, PanResponder } from 'react-native';
 import { Colors, MoodColors } from '../constants/colors';
 import { UserLocation } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-// 更美观的地图瓦片源 — CartoDB Voyager（干净、现代、彩色）
 const TILE_URL = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
 
 const latLngToTile = (lat: number, lng: number, zoom: number) => {
@@ -58,42 +57,54 @@ export const TileMap: React.FC<Props> = ({
   markers = [],
   onMarkerPress,
   height = SCREEN_HEIGHT,
-  zoom: initialZoom = 16,
+  zoom: initialZoom = 18,
 }) => {
   const GRID = 5;
   const EXTRA = 2;
   const tileDisplaySize = SCREEN_WIDTH / GRID;
 
   const [zoom, setZoom] = useState(initialZoom);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const lastOffset = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const [offsetState, setOffsetState] = useState({ x: 0, y: 0 });
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gs) =>
-          Math.abs(gs.dx) > 3 || Math.abs(gs.dy) > 3,
-        onPanResponderGrant: () => {
-          lastOffset.current = { ...offset };
-        },
-        onPanResponderMove: (_, gs) => {
-          setOffset({
-            x: lastOffset.current.x + gs.dx,
-            y: lastOffset.current.y + gs.dy,
-          });
-        },
-      }),
-    [offset]
-  );
+  // 用 ref 跟踪拖拽，避免 useMemo 依赖问题
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
+      onPanResponderGrant: () => {
+        // 记录拖拽开始时的偏移
+      },
+      onPanResponderMove: (_, gs) => {
+        const newOffset = {
+          x: offsetRef.current.x + gs.dx,
+          y: offsetRef.current.y + gs.dy,
+        };
+        setOffsetState(newOffset);
+      },
+      onPanResponderRelease: (_, gs) => {
+        offsetRef.current = {
+          x: offsetRef.current.x + gs.dx,
+          y: offsetRef.current.y + gs.dy,
+        };
+      },
+    })
+  ).current;
 
   const recenter = () => {
-    setOffset({ x: 0, y: 0 });
+    offsetRef.current = { x: 0, y: 0 };
+    setOffsetState({ x: 0, y: 0 });
     setZoom(initialZoom);
   };
 
   const zoomIn = () => setZoom((z) => Math.min(z + 1, 18));
-  const zoomOut = () => setZoom((z) => Math.max(z - 1, 10));
+  const zoomOut = () => {
+    setZoom((z) => Math.max(z - 1, 12));
+    // 缩放时重置偏移避免位置错位
+    offsetRef.current = { x: 0, y: 0 };
+    setOffsetState({ x: 0, y: 0 });
+  };
 
   const centerTile = useMemo(
     () => latLngToTile(location.latitude, location.longitude, zoom),
@@ -131,22 +142,18 @@ export const TileMap: React.FC<Props> = ({
   }, [markers, zoom, originTileX, originTileY, tileDisplaySize]);
 
   const totalGridW = (GRID + EXTRA * 2) * tileDisplaySize;
-  const totalGridH = totalGridW;
-
-  // 瓦片层居中偏移
   const baseLeft = (SCREEN_WIDTH - totalGridW) / 2;
-  const baseTop = (height - totalGridH) / 2;
+  const baseTop = (height - totalGridW) / 2;
 
   return (
     <View style={[styles.container, { height }]} {...panResponder.panHandlers}>
-      {/* 瓦片层 */}
       <View
         style={{
           position: 'absolute',
           width: totalGridW,
-          height: totalGridH,
-          left: baseLeft + offset.x,
-          top: baseTop + offset.y,
+          height: totalGridW,
+          left: baseLeft + offsetState.x,
+          top: baseTop + offsetState.y,
         }}
       >
         {tiles.map((tile) => (
@@ -166,7 +173,7 @@ export const TileMap: React.FC<Props> = ({
           />
         ))}
 
-        {/* 心情路径连线 — Polarsteps 风格 */}
+        {/* 心情路径连线 */}
         {markerPositions.length >= 2 &&
           markerPositions.slice(0, -1).map((m, i) => {
             const next = markerPositions[i + 1];
@@ -174,7 +181,7 @@ export const TileMap: React.FC<Props> = ({
             const dy = next.py - m.py;
             const length = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            if (length > 500) return null; // 太远的不连
+            if (length > 500) return null;
             return (
               <View
                 key={`path-${i}`}
@@ -239,7 +246,6 @@ export const TileMap: React.FC<Props> = ({
         </TouchableOpacity>
       </View>
 
-      {/* 归属 */}
       <Text style={styles.attribution}>© OpenStreetMap © CARTO</Text>
     </View>
   );
@@ -250,7 +256,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#F2EFE9',
   },
-  // 用户位置
   userPulse: {
     position: 'absolute',
     width: 32,
@@ -274,7 +279,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  // 标记
   marker: {
     position: 'absolute',
     width: 40,
@@ -313,7 +317,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
-  // 控制按钮
   controls: {
     position: 'absolute',
     right: 16,

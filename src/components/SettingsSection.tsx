@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, StyleSheet, Alert } from 'react-native';
 import { Colors } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 import { exportEntriesAsCSV } from '../utils/exportData';
 import { Entry } from '../types';
 
@@ -9,72 +10,61 @@ interface Props {
 }
 
 export const SettingsSection: React.FC<Props> = ({ entries }) => {
-  const handleExport = () => {
-    exportEntriesAsCSV(entries);
-  };
-
-  const handleComingSoon = (feature: string) => {
-    Alert.alert(feature, '此功能即将推出');
-  };
+  const { isDark, toggleDark } = useTheme();
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>设置</Text>
 
-      <SettingRow
-        icon="👤"
-        title="用户名"
-        subtitle="在个人资料中编辑"
-        onPress={() => handleComingSoon('用户名')}
-      />
-      <SettingRow
-        icon="🌐"
-        title="语言"
-        subtitle="中文"
-        onPress={() => handleComingSoon('语言切换')}
-      />
-      <SettingRow
-        icon="🌙"
-        title="深色模式"
-        subtitle="即将推出"
-        onPress={() => handleComingSoon('深色模式')}
-      />
-      <SettingRow
-        icon="📤"
-        title="导出数据"
-        subtitle="导出为 CSV 文件"
-        onPress={handleExport}
-      />
-      <SettingRow
-        icon="ℹ️"
-        title="关于"
-        subtitle="MapJournal v2.0"
-        onPress={() => {}}
-        last
-      />
+      <View style={[styles.row, styles.rowBorder]}>
+        <Text style={styles.rowIcon}>🌙</Text>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>深色模式</Text>
+        </View>
+        <Switch
+          value={isDark}
+          onValueChange={toggleDark}
+          trackColor={{ false: Colors.border, true: Colors.primary }}
+          thumbColor="#FFFFFF"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.row, styles.rowBorder]}
+        onPress={() => Alert.alert('语言', '更多语言支持即将推出')}
+        activeOpacity={0.6}
+      >
+        <Text style={styles.rowIcon}>🌐</Text>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>语言</Text>
+          <Text style={styles.rowSubtitle}>中文</Text>
+        </View>
+        <Text style={styles.rowArrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.row, styles.rowBorder]}
+        onPress={() => exportEntriesAsCSV(entries)}
+        activeOpacity={0.6}
+      >
+        <Text style={styles.rowIcon}>📤</Text>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>导出数据</Text>
+          <Text style={styles.rowSubtitle}>导出为 CSV 文件</Text>
+        </View>
+        <Text style={styles.rowArrow}>›</Text>
+      </TouchableOpacity>
+
+      <View style={styles.row}>
+        <Text style={styles.rowIcon}>ℹ️</Text>
+        <View style={styles.rowContent}>
+          <Text style={styles.rowTitle}>关于</Text>
+          <Text style={styles.rowSubtitle}>MapJournal v2.0</Text>
+        </View>
+      </View>
     </View>
   );
 };
-
-const SettingRow = ({
-  icon, title, subtitle, onPress, last,
-}: {
-  icon: string; title: string; subtitle: string;
-  onPress: () => void; last?: boolean;
-}) => (
-  <TouchableOpacity
-    style={[styles.row, last ? undefined : styles.rowBorder]}
-    onPress={onPress}
-    activeOpacity={0.6}
-  >
-    <Text style={styles.rowIcon}>{icon}</Text>
-    <View style={styles.rowContent}>
-      <Text style={styles.rowTitle}>{title}</Text>
-      <Text style={styles.rowSubtitle}>{subtitle}</Text>
-    </View>
-    <Text style={styles.rowArrow}>›</Text>
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   container: {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { EntriesProvider } from './src/context/EntriesContext';
 import { CustomTagsProvider } from './src/context/CustomTagsContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 import { Colors } from './src/constants/colors';
 import { MapScreen } from './src/screens/MapScreen';
 import { TimelineScreen } from './src/screens/TimelineScreen';
@@ -71,6 +72,7 @@ export default function App() {
   return (
     <EntriesProvider>
       <CustomTagsProvider>
+      <ThemeProvider>
       <View style={styles.root}>
         {isMapTab && (
           <View style={styles.content}>
@@ -96,6 +98,7 @@ export default function App() {
         <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
         <StatusBar style={isMapTab ? 'dark' : 'dark'} />
       </View>
+      </ThemeProvider>
       </CustomTagsProvider>
     </EntriesProvider>
   );

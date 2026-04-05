@@ -1,24 +1,40 @@
-// 主题颜色 — 温暖自然风（受 FocusTraveller 启发）
-export const Colors = {
-  primary: '#6366F1',      // 靛蓝紫 — 稍暖的紫色
-  accent: '#F472B6',       // 玫瑰粉
-  background: '#FAFAF9',   // 暖白（偏奶油色而非冷灰）
-  card: '#FFFFFF',         // 卡片白
-  text: '#1C1917',         // 暖黑（Stone-900）
-  textSecondary: '#78716C', // 暖灰（Stone-500）
-  border: '#E7E5E4',       // 暖边框（Stone-200）
-  shadow: '#000000',       // 阴影色
-  success: '#22C55E',      // 绿色成功
+// 浅色主题
+export const LightColors = {
+  primary: '#6366F1',
+  accent: '#F472B6',
+  background: '#FAFAF9',
+  card: '#FFFFFF',
+  text: '#1C1917',
+  textSecondary: '#78716C',
+  border: '#E7E5E4',
+  shadow: '#000000',
+  success: '#22C55E',
 };
 
-// 心情对应颜色 — 8种，更柔和温暖的色调
+// 深色主题
+export const DarkColors = {
+  primary: '#818CF8',
+  accent: '#F9A8D4',
+  background: '#1C1917',
+  card: '#292524',
+  text: '#FAFAF9',
+  textSecondary: '#A8A29E',
+  border: '#44403C',
+  shadow: '#000000',
+  success: '#4ADE80',
+};
+
+// 默认导出浅色（组件通过 useAppColors() 获取动态颜色）
+export const Colors = LightColors;
+
+// 心情颜色 — 深浅模式通用
 export const MoodColors: Record<string, string> = {
-  amazing: '#EC4899',  // 玫瑰粉 — 超棒
-  happy: '#F59E0B',    // 琥珀金 — 开心
-  good: '#10B981',     // 翡翠绿 — 不错
-  calm: '#06B6D4',     // 青蓝 — 平静
-  neutral: '#94A3B8',  // 石板灰 — 一般
-  anxious: '#F97316',  // 橙色 — 焦虑
-  sad: '#8B5CF6',      // 紫罗兰 — 难过
-  angry: '#EF4444',    // 红色 — 生气
+  amazing: '#EC4899',
+  happy: '#F59E0B',
+  good: '#10B981',
+  calm: '#06B6D4',
+  neutral: '#94A3B8',
+  anxious: '#F97316',
+  sad: '#8B5CF6',
+  angry: '#EF4444',
 };
