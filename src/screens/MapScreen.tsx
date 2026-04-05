@@ -16,9 +16,11 @@ import { TileMap } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
-import { QuickMoodBar } from '../components/QuickMoodBar';
+import { QuickRecordPanel } from '../components/QuickRecordPanel';
 import { StreakBanner } from '../components/StreakBanner';
+import { LocationTimeline } from '../components/LocationTimeline';
 import { MapTimeline } from '../components/MapTimeline';
+import { getEntriesNearLocation } from '../utils/locationCluster';
 import { Entry, MoodType } from '../types';
 import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
@@ -32,6 +34,10 @@ export const MapScreen: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
+  // 位置时间轴
+  const [locationTimelineEntries, setLocationTimelineEntries] = useState<Entry[]>([]);
+  const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
+  const [showLocationTimeline, setShowLocationTimeline] = useState(false);
 
   useEffect(() => {
     try {
@@ -47,7 +53,19 @@ export const MapScreen: React.FC = () => {
 
   const handleMarkerPress = useCallback((id: string) => {
     const entry = entries.find((e) => e.id === id);
-    if (entry) setSelectedEntry(entry);
+    if (entry) {
+      // 查找该位置附近的所有记录
+      const nearby = getEntriesNearLocation(entries, entry.latitude, entry.longitude, 200);
+      if (nearby.length > 1) {
+        // 多条记录 → 打开位置时间轴
+        setLocationTimelineEntries(nearby);
+        setLocationTimelineName(entry.address);
+        setShowLocationTimeline(true);
+      } else {
+        // 单条记录 → 直接打开详情
+        setSelectedEntry(entry);
+      }
+    }
   }, [entries]);
 
   if (loading) {
@@ -163,13 +181,24 @@ export const MapScreen: React.FC = () => {
         )}
       </View>
 
-      {/* 快速心情记录栏 — Daylio 风格一键记录 */}
+      {/* 快速记录面板 */}
       <View style={styles.quickBarContainer}>
-        <QuickMoodBar
+        <QuickRecordPanel
           location={location}
           onFullEntry={() => setShowNewEntry(true)}
           onSaved={() => setPanelExpanded(false)}
         />
+      </View>
+
+      {/* 社交占位按钮 */}
+      <View style={styles.socialButtons}>
+        <TouchableOpacity
+          style={styles.socialBtn}
+          onPress={() => {/* TODO: Alert "即将推出" */}}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.socialBtnText}>👥 好友</Text>
+        </TouchableOpacity>
       </View>
 
       {showWelcome && <WelcomeOverlay onGetStarted={handleWelcomeClose} />}
@@ -178,6 +207,18 @@ export const MapScreen: React.FC = () => {
         visible={showNewEntry}
         onClose={() => setShowNewEntry(false)}
         location={location}
+      />
+
+      {/* 位置时间轴 */}
+      <LocationTimeline
+        entries={locationTimelineEntries}
+        locationName={locationTimelineName}
+        visible={showLocationTimeline}
+        onClose={() => setShowLocationTimeline(false)}
+        onEntryPress={(e) => {
+          setShowLocationTimeline(false);
+          setSelectedEntry(e);
+        }}
       />
 
       <EntryDetail
@@ -345,7 +386,29 @@ const styles = StyleSheet.create({
   quickBarContainer: {
     position: 'absolute',
     bottom: 200,
-    left: 20,
-    right: 20,
+    left: 16,
+    right: 16,
+  },
+  // 社交按钮
+  socialButtons: {
+    position: 'absolute',
+    top: 56,
+    left: 16,
+  },
+  socialBtn: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  socialBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
   },
 });

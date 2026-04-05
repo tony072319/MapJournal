@@ -57,7 +57,7 @@ export const TileMap: React.FC<Props> = ({
   markers = [],
   onMarkerPress,
   height = SCREEN_HEIGHT,
-  zoom: initialZoom = 15,
+  zoom: initialZoom = 16,
 }) => {
   const GRID = 5;
   const EXTRA = 2;
