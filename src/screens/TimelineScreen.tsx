@@ -81,7 +81,10 @@ const TimelineItem = ({ entry, onPress }: { entry: Entry; onPress: () => void })
         ) : null}
 
         {entry.address ? (
-          <Text style={styles.itemAddress} numberOfLines={1}>{entry.address}</Text>
+          <View style={styles.itemLocationRow}>
+            <Text style={styles.itemLocationPin}>📍</Text>
+            <Text style={styles.itemAddress} numberOfLines={1}>{entry.address}</Text>
+          </View>
         ) : null}
       </View>
     </TouchableOpacity>
@@ -338,9 +341,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 6,
   },
+  itemLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  itemLocationPin: {
+    fontSize: 11,
+    marginRight: 4,
+  },
   itemAddress: {
     fontSize: 12,
     color: Colors.textSecondary,
+    flex: 1,
   },
   // 日期分组头
   sectionHeader: {

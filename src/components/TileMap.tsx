@@ -42,6 +42,7 @@ interface MarkerData {
   emoji: string;
   id: string;
   moodColor: string;
+  count?: number;
 }
 
 interface Props {
@@ -209,6 +210,11 @@ export const TileMap: React.FC<Props> = ({
             activeOpacity={0.7}
           >
             <Text style={styles.markerEmoji}>{m.emoji}</Text>
+            {m.count && m.count > 1 ? (
+              <View style={styles.markerCountBadge}>
+                <Text style={styles.markerCountText}>{m.count}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         ))}
 
@@ -287,6 +293,25 @@ const styles = StyleSheet.create({
   },
   markerEmoji: {
     fontSize: 20,
+  },
+  markerCountBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  markerCountText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   // 控制按钮
   controls: {

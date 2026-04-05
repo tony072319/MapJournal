@@ -1,31 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
   ActivityIndicator,
   Text,
   TouchableOpacity,
-  ScrollView,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
-import { getMoodByType } from '../constants/moods';
 import { TileMap } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
 import { QuickRecordPanel } from '../components/QuickRecordPanel';
-import { StreakBanner } from '../components/StreakBanner';
 import { LocationTimeline } from '../components/LocationTimeline';
-import { MapTimeline } from '../components/MapTimeline';
-import { getEntriesNearLocation } from '../utils/locationCluster';
+import { getEntriesNearLocation, clusterEntriesByLocation } from '../utils/locationCluster';
 import { Entry, MoodType } from '../types';
-import { formatRelative } from '../utils/dateFormat';
 import AsyncStorage from '../utils/storage';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const MapScreen: React.FC = () => {
   const { location, loading, error } = useLocation();
@@ -33,8 +26,6 @@ export const MapScreen: React.FC = () => {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [panelExpanded, setPanelExpanded] = useState(false);
-  // 位置时间轴
   const [locationTimelineEntries, setLocationTimelineEntries] = useState<Entry[]>([]);
   const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
   const [showLocationTimeline, setShowLocationTimeline] = useState(false);
@@ -51,22 +42,41 @@ export const MapScreen: React.FC = () => {
     try { AsyncStorage.setItem('hasLaunched', 'true'); } catch {}
   };
 
+  // 聚合标记：同一位置多条记录合并为一个带数字的标记
+  const clusteredMarkers = useMemo(() => {
+    if (entries.length === 0) return [];
+    const clusters = clusterEntriesByLocation(entries, 150);
+    return clusters.map((c) => ({
+      id: c.entries[0].id,
+      latitude: c.latitude,
+      longitude: c.longitude,
+      emoji: c.entries.length > 1 ? `${c.entries[0].emoji}` : c.entries[0].emoji,
+      moodColor: MoodColors[c.entries[0].mood as MoodType] || Colors.primary,
+      count: c.entries.length,
+    }));
+  }, [entries]);
+
   const handleMarkerPress = useCallback((id: string) => {
     const entry = entries.find((e) => e.id === id);
     if (entry) {
-      // 查找该位置附近的所有记录
       const nearby = getEntriesNearLocation(entries, entry.latitude, entry.longitude, 200);
       if (nearby.length > 1) {
-        // 多条记录 → 打开位置时间轴
         setLocationTimelineEntries(nearby);
         setLocationTimelineName(entry.address);
         setShowLocationTimeline(true);
       } else {
-        // 单条记录 → 直接打开详情
         setSelectedEntry(entry);
       }
     }
   }, [entries]);
+
+  const handleFriendPress = () => {
+    Alert.alert(
+      '好友功能',
+      '此功能需要网络连接，即将在后续版本中推出！',
+      [{ text: '好的', style: 'default' }]
+    );
+  };
 
   if (loading) {
     return (
@@ -86,28 +96,17 @@ export const MapScreen: React.FC = () => {
     );
   }
 
-  // 最近的几条记录（用于底部面板）
-  const recentEntries = [...entries]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
-
   return (
     <View style={styles.container}>
-      {/* 全屏地图 */}
+      {/* 全屏地图 — zoom 17 更近 */}
       <TileMap
         location={location}
-        markers={entries.map((e) => ({
-          id: e.id,
-          latitude: e.latitude,
-          longitude: e.longitude,
-          emoji: e.emoji,
-          moodColor: MoodColors[e.mood as MoodType] || Colors.primary,
-        }))}
+        markers={clusteredMarkers}
         onMarkerPress={handleMarkerPress}
-        zoom={15}
+        zoom={17}
       />
 
-      {/* 顶部浮动信息 */}
+      {/* 顶部浮动标题栏 */}
       <View style={styles.topOverlay}>
         <View style={styles.topBar}>
           <Text style={styles.topTitle}>MapJournal</Text>
@@ -119,86 +118,24 @@ export const MapScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* 底部浮动面板 */}
-      <View style={[styles.bottomPanel, panelExpanded ? styles.bottomPanelExpanded : undefined]}>
-        {/* 拖拽把手 */}
-        <TouchableOpacity
-          style={styles.panelHandle}
-          onPress={() => setPanelExpanded(!panelExpanded)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.handleBar} />
-          <Text style={styles.panelTitle}>
-            {entries.length === 0 ? '还没有心情记录' : `最近的心情`}
-          </Text>
-        </TouchableOpacity>
-
-        {/* 收起时：连续记录 + 7天打卡 */}
-        {!panelExpanded && <StreakBanner entries={entries} />}
-
-        {/* 展开时：横向时间轴 + 列表 */}
-        {panelExpanded && (
-          <ScrollView
-            style={styles.panelScroll}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* 横向时间轴卡片 — Polarsteps 风格 */}
-            <MapTimeline entries={entries} onEntryPress={(e) => setSelectedEntry(e)} />
-
-            {entries.length === 0 && (
-              <Text style={styles.panelEmpty}>
-                点击快速记录栏开始记录心情
-              </Text>
-            )}
-
-            {recentEntries.map((entry) => {
-              const mood = getMoodByType(entry.mood);
-              const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
-              return (
-                <TouchableOpacity
-                  key={entry.id}
-                  style={styles.panelCard}
-                  onPress={() => setSelectedEntry(entry)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.panelCardDot, { backgroundColor: moodColor }]} />
-                  <Text style={styles.panelCardEmoji}>{entry.emoji}</Text>
-                  <View style={styles.panelCardContent}>
-                    <Text style={[styles.panelCardMood, { color: moodColor }]}>{mood.label}</Text>
-                    {entry.note ? (
-                      <Text style={styles.panelCardNote} numberOfLines={1}>{entry.note}</Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.panelCardTime}>{formatRelative(entry.createdAt)}</Text>
-                </TouchableOpacity>
-              );
-            })}
-
-            {entries.length > 5 && (
-              <Text style={styles.panelMore}>还有 {entries.length - 5} 条记录...</Text>
-            )}
-          </ScrollView>
-        )}
-      </View>
-
-      {/* 快速记录面板 */}
-      <View style={styles.quickBarContainer}>
-        <QuickRecordPanel
-          location={location}
-          onFullEntry={() => setShowNewEntry(true)}
-          onSaved={() => setPanelExpanded(false)}
-        />
-      </View>
-
-      {/* 社交占位按钮 */}
+      {/* 好友按钮 — 点击弹出提示 */}
       <View style={styles.socialButtons}>
         <TouchableOpacity
           style={styles.socialBtn}
-          onPress={() => {/* TODO: Alert "即将推出" */}}
+          onPress={handleFriendPress}
           activeOpacity={0.7}
         >
           <Text style={styles.socialBtnText}>👥 好友</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* 快速记录面板 — 贴近底部Tab栏 */}
+      <View style={styles.quickBarContainer}>
+        <QuickRecordPanel
+          location={location}
+          onFullEntry={() => setShowNewEntry(true)}
+          onSaved={() => {}}
+        />
       </View>
 
       {showWelcome && <WelcomeOverlay onGetStarted={handleWelcomeClose} />}
@@ -209,7 +146,6 @@ export const MapScreen: React.FC = () => {
         location={location}
       />
 
-      {/* 位置时间轴 */}
       <LocationTimeline
         entries={locationTimelineEntries}
         locationName={locationTimelineName}
@@ -256,7 +192,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
-  // 顶部浮动
   topOverlay: {
     position: 'absolute',
     top: 8,
@@ -297,106 +232,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  // 底部面板
-  bottomPanel: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 80,
-    maxHeight: 190,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  bottomPanelExpanded: {
-    maxHeight: SCREEN_HEIGHT * 0.45,
-  },
-  panelHandle: {
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
-  handleBar: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
-    marginBottom: 10,
-  },
-  panelTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  panelScroll: {
-    paddingHorizontal: 16,
-  },
-  panelEmpty: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    paddingVertical: 12,
-  },
-  panelCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  panelCardDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 10,
-  },
-  panelCardEmoji: {
-    fontSize: 22,
-    marginRight: 12,
-  },
-  panelCardContent: {
-    flex: 1,
-  },
-  panelCardMood: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  panelCardNote: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 1,
-  },
-  panelCardTime: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  panelMore: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: Colors.textSecondary,
-    paddingVertical: 12,
-  },
-  // 快速记录栏
-  quickBarContainer: {
-    position: 'absolute',
-    bottom: 200,
-    left: 16,
-    right: 16,
-  },
-  // 社交按钮
   socialButtons: {
     position: 'absolute',
     top: 56,
     left: 16,
   },
   socialBtn: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -410,5 +252,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
+  },
+  quickBarContainer: {
+    position: 'absolute',
+    bottom: 8,
+    left: 12,
+    right: 12,
   },
 });
