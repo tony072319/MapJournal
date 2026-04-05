@@ -6,7 +6,8 @@ import { UserLocation } from '../types';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-const TILE_URL = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+// 柔和卡通风地图瓦片 — Stadia Alidade Smooth (干净、柔和、极简)
+const TILE_URL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}@2x.png';
 
 const latLngToTile = (lat: number, lng: number, zoom: number) => {
   const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
@@ -254,45 +255,45 @@ export const TileMap: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: '#F2EFE9',
+    backgroundColor: '#F5F0EB',
   },
   userPulse: {
     position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(124, 108, 240, 0.15)',
     zIndex: 19,
   },
   userDot: {
     position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#6366F1',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#7C6CF0',
     borderWidth: 3,
     borderColor: '#FFFFFF',
     zIndex: 20,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#7C6CF0',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 5,
   },
   marker: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FFFFFF',
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowColor: '#7C6CF0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
     zIndex: 10,
   },
   markerEmoji: {
@@ -324,9 +325,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   controlBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',

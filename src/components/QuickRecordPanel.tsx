@@ -150,12 +150,12 @@ export const QuickRecordPanel: React.FC<Props> = ({ location, onFullEntry, onSav
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255,255,255,0.96)',
-    borderRadius: 20,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    borderRadius: 24,
+    padding: 16,
+    shadowColor: '#7C6CF0',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
-    shadowRadius: 12,
+    shadowRadius: 16,
     elevation: 8,
   },
   savedRow: {

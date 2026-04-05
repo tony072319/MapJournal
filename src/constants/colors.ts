@@ -1,40 +1,40 @@
-// 浅色主题
+// 浅色主题 — 卡通极简风（柔和、温暖、圆润）
 export const LightColors = {
-  primary: '#6366F1',
-  accent: '#F472B6',
-  background: '#FAFAF9',
+  primary: '#7C6CF0',      // 柔和紫（比靛蓝更温暖）
+  accent: '#FF8FAB',       // 柔粉
+  background: '#FBF9F7',   // 暖白奶油色
   card: '#FFFFFF',
-  text: '#1C1917',
-  textSecondary: '#78716C',
-  border: '#E7E5E4',
-  shadow: '#000000',
-  success: '#22C55E',
+  text: '#2D2B3D',         // 深紫灰（比纯黑更柔和）
+  textSecondary: '#8E8CA3', // 紫灰
+  border: '#EEEDF5',       // 淡紫边框
+  shadow: '#7C6CF0',       // 用主色做阴影更柔和
+  success: '#5CD07A',      // 柔绿
 };
 
-// 深色主题
+// 深色主题 — 同样柔和
 export const DarkColors = {
-  primary: '#818CF8',
-  accent: '#F9A8D4',
-  background: '#1C1917',
-  card: '#292524',
-  text: '#FAFAF9',
-  textSecondary: '#A8A29E',
-  border: '#44403C',
+  primary: '#9B8FFF',
+  accent: '#FFB3C6',
+  background: '#1A1928',    // 深紫夜色
+  card: '#252338',
+  text: '#F0EEF6',
+  textSecondary: '#9896B0',
+  border: '#3A3850',
   shadow: '#000000',
-  success: '#4ADE80',
+  success: '#7AE89B',
 };
 
-// 默认导出浅色（组件通过 useAppColors() 获取动态颜色）
+// 默认导出浅色
 export const Colors = LightColors;
 
-// 心情颜色 — 深浅模式通用
+// 心情颜色 — 更柔和的色调
 export const MoodColors: Record<string, string> = {
-  amazing: '#EC4899',
-  happy: '#F59E0B',
-  good: '#10B981',
-  calm: '#06B6D4',
-  neutral: '#94A3B8',
-  anxious: '#F97316',
-  sad: '#8B5CF6',
-  angry: '#EF4444',
+  amazing: '#FF7EB3',  // 柔粉红
+  happy: '#FFB347',    // 暖橙黄
+  good: '#77DD77',     // 薄荷绿
+  calm: '#89CFF0',     // 天空蓝
+  neutral: '#B0AEC1',  // 薰衣草灰
+  anxious: '#FFB84D',  // 琥珀
+  sad: '#B19CD9',      // 淡紫
+  angry: '#FF6B6B',    // 柔红
 };
