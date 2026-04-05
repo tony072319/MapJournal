@@ -1,31 +1,78 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useEntries } from '../context/EntriesContext';
-import { Colors } from '../constants/colors';
+import { Colors, MoodColors } from '../constants/colors';
+import { MOOD_OPTIONS } from '../constants/moods';
+import { MoodType } from '../types';
+import dayjs from 'dayjs';
 
-// Phase 4 会完善这个页面，现在先放占位内容确保编译通过
+// 组件
+import { UserProfileCard } from '../components/UserProfileCard';
+import { SettingsSection } from '../components/SettingsSection';
+import { MoodCalendar } from '../components/MoodCalendar';
+import { MoodChart } from '../components/MoodChart';
+import { MoodInsight } from '../components/MoodInsight';
+import { YearPixels } from '../components/YearPixels';
+import { TopLocations } from '../components/TopLocations';
+import { Achievements } from '../components/Achievements';
+
 export const AboutMeScreen: React.FC = () => {
   const { entries } = useEntries();
 
+  // 连续记录天数
+  const streakDays = useMemo(() => {
+    if (entries.length === 0) return 0;
+    const dates = [...new Set(entries.map((e) => dayjs(e.createdAt).format('YYYY-MM-DD')))]
+      .sort().reverse();
+    let streak = 0;
+    let current = dayjs();
+    for (const dateStr of dates) {
+      if (current.diff(dayjs(dateStr), 'day') <= 1) {
+        streak++;
+        current = dayjs(dateStr);
+      } else break;
+    }
+    return streak;
+  }, [entries]);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>👤</Text>
-        </View>
-        <Text style={styles.name}>MapJournal 用户</Text>
-        <Text style={styles.stats}>{entries.length} 条记录</Text>
-      </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 用户资料卡片 */}
+      <UserProfileCard
+        entryCount={entries.length}
+        friendCount={0}
+        streakDays={streakDays}
+      />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>设置</Text>
-        <Text style={styles.placeholder}>即将推出...</Text>
-      </View>
+      {/* 设置 */}
+      <SettingsSection entries={entries} />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>回忆</Text>
-        <Text style={styles.placeholder}>即将推出...</Text>
-      </View>
+      {/* 回忆 — 数据分析 */}
+      {entries.length > 0 && (
+        <>
+          {/* 心情日历 */}
+          <MoodCalendar entries={entries} onDayPress={() => {}} />
+
+          {/* 7天趋势 */}
+          <MoodChart entries={entries} />
+
+          {/* 心情洞察 */}
+          <MoodInsight entries={entries} />
+
+          {/* 最常去的地点 */}
+          <TopLocations entries={entries} />
+
+          {/* 年度像素图 */}
+          <YearPixels entries={entries} />
+
+          {/* 成就徽章 */}
+          <Achievements entries={entries} />
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -38,55 +85,5 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
-  },
-  profileCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    fontSize: 32,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  stats: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  section: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  placeholder: {
-    fontSize: 14,
-    color: Colors.textSecondary,
   },
 });
