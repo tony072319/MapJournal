@@ -4,34 +4,39 @@ export type MoodType = 'amazing' | 'happy' | 'good' | 'calm' | 'neutral' | 'anxi
 // 活动标签
 export type ActivityTag = string;
 
-// 一条心情记录的完整数据
+// 位置时间轴筛选类型
+export type TimelineFilterType = 'all' | 'myself' | 'friends';
+
+// 一条心情记录
 export interface Entry {
   id: string;
   mood: MoodType;
   emoji: string;
   note: string | null;
   photoUri: string | null;
-  activities: string | null; // JSON array of activity tags
+  voiceUri: string | null;
+  activities: string | null; // JSON array
   latitude: number;
   longitude: number;
   address: string | null;
-  createdAt: string; // ISO 格式
+  createdAt: string;
   updatedAt: string;
 }
 
-// 创建新记录时需要的数据
+// 创建新记录
 export interface NewEntry {
   mood: MoodType;
   emoji: string;
   note?: string;
   photoUri?: string;
+  voiceUri?: string;
   activities?: string[];
   latitude: number;
   longitude: number;
   address?: string;
 }
 
-// 心情的定义信息
+// 心情选项
 export interface MoodOption {
   type: MoodType;
   emoji: string;
@@ -44,6 +49,34 @@ export interface ActivityOption {
   id: string;
   icon: string;
   label: string;
+}
+
+// 用户资料
+export interface UserProfile {
+  id: string;
+  displayName: string;
+  avatarUri: string | null;
+  language: string;
+  darkMode: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 自定义标签
+export interface CustomTag {
+  id: string;
+  icon: string;
+  label: string;
+  createdAt: string;
+}
+
+// 好友（占位）
+export interface Friend {
+  id: string;
+  displayName: string;
+  avatarUri: string | null;
+  status: 'pending' | 'accepted' | 'blocked';
+  createdAt: string;
 }
 
 // 用户位置

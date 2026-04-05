@@ -9,17 +9,18 @@ import {
   Platform,
 } from 'react-native';
 import { EntriesProvider } from './src/context/EntriesContext';
+import { CustomTagsProvider } from './src/context/CustomTagsContext';
 import { Colors } from './src/constants/colors';
 import { MapScreen } from './src/screens/MapScreen';
 import { TimelineScreen } from './src/screens/TimelineScreen';
-import { StatsScreen } from './src/screens/StatsScreen';
+import { AboutMeScreen } from './src/screens/AboutMeScreen';
 
-type TabName = 'map' | 'timeline' | 'stats';
+type TabName = 'map' | 'timeline' | 'aboutme';
 
 const TABS: { key: TabName; label: string; icon: string }[] = [
   { key: 'map', label: '地图', icon: '🗺️' },
   { key: 'timeline', label: '时间线', icon: '📋' },
-  { key: 'stats', label: '统计', icon: '📊' },
+  { key: 'aboutme', label: '我的', icon: '👤' },
 ];
 
 function TabBar({
@@ -69,25 +70,24 @@ export default function App() {
 
   return (
     <EntriesProvider>
+      <CustomTagsProvider>
       <View style={styles.root}>
-        {/* 地图Tab：全屏无安全区域 */}
         {isMapTab && (
           <View style={styles.content}>
             <MapScreen />
           </View>
         )}
 
-        {/* 其他Tab：有安全区域和标题 */}
         {!isMapTab && (
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>
-                {activeTab === 'timeline' ? '心情时间线' : '心情统计'}
+                {activeTab === 'timeline' ? '时间线' : '我的'}
               </Text>
             </View>
             <View style={styles.content}>
               {activeTab === 'timeline' && <TimelineScreen />}
-              {activeTab === 'stats' && <StatsScreen />}
+              {activeTab === 'aboutme' && <AboutMeScreen />}
             </View>
           </SafeAreaView>
         )}
@@ -96,6 +96,7 @@ export default function App() {
         <TabBar activeTab={activeTab} onTabPress={setActiveTab} />
         <StatusBar style={isMapTab ? 'dark' : 'dark'} />
       </View>
+      </CustomTagsProvider>
     </EntriesProvider>
   );
 }

@@ -13,6 +13,7 @@
     "@react-navigation/native": "^7.2.2",
     "dayjs": "^1.11.20",
     "expo": "~54.0.33",
+    "expo-av": "^16.0.8",
     "expo-file-system": "^55.0.12",
     "expo-image-picker": "^55.0.14",
     "expo-location": "^55.1.4",
