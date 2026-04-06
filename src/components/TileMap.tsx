@@ -6,32 +6,37 @@ import { UserLocation } from '../types';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-// 地图风格 — 所有免费无需API key
+// 地图风格
 export const MAP_STYLES = {
+  illustrated: {
+    url: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+    label: '插画',
+    icon: '🎨',
+    overlay: true, // 叠加插画层
+  },
   voyager: {
     url: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
     label: '彩色',
     icon: '🗺️',
+    overlay: false,
   },
-  watercolor: {
-    url: 'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg',
-    label: '水彩',
-    icon: '🎨',
+  dark: {
+    url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+    label: '夜景',
+    icon: '🌙',
+    overlay: false,
   },
   topo: {
     url: 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
     label: '地形',
     icon: '⛰️',
-  },
-  dark: {
-    url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-    label: '暗色',
-    icon: '🌙',
+    overlay: false,
   },
   minimal: {
     url: 'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png',
     label: '极简',
     icon: '⬜',
+    overlay: false,
   },
 };
 
@@ -82,15 +87,31 @@ interface Props {
   mapStyle?: MapStyleKey;
 }
 
+// 装饰性元素 — 根据位置伪随机生成
+const DECORATIONS = ['🌳', '🌲', '🌿', '🏠', '☁️', '🌸', '🍃', '🏡', '🌾', '⛅'];
+
+const getDecoration = (x: number, y: number): { emoji: string; size: number; opacity: number } | null => {
+  // 用坐标做伪随机，约1/8的位置有装饰
+  const hash = ((x * 7919 + y * 104729) % 100);
+  if (hash > 12) return null;
+  const idx = (x * 31 + y * 17) % DECORATIONS.length;
+  const size = 14 + (hash % 8);
+  const opacity = 0.3 + (hash % 4) * 0.1;
+  return { emoji: DECORATIONS[idx], size, opacity };
+};
+
 export const TileMap: React.FC<Props> = ({
   location,
   markers = [],
   onMarkerPress,
   height = SCREEN_HEIGHT,
-  zoom: initialZoom = 18,
-  mapStyle = 'voyager',
+  zoom: initialZoom = 17,
+  mapStyle = 'illustrated',
 }) => {
-  const tileUrl = MAP_STYLES[mapStyle]?.url || MAP_STYLES.voyager.url;
+  const styleConfig = MAP_STYLES[mapStyle] || MAP_STYLES.illustrated;
+  const tileUrl = styleConfig.url;
+  const showOverlay = styleConfig.overlay;
+
   const GRID = 5;
   const EXTRA = 2;
   const tileDisplaySize = SCREEN_WIDTH / GRID;
@@ -99,21 +120,16 @@ export const TileMap: React.FC<Props> = ({
   const offsetRef = useRef({ x: 0, y: 0 });
   const [offsetState, setOffsetState] = useState({ x: 0, y: 0 });
 
-  // 用 ref 跟踪拖拽，避免 useMemo 依赖问题
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gs) =>
         Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
-      onPanResponderGrant: () => {
-        // 记录拖拽开始时的偏移
-      },
       onPanResponderMove: (_, gs) => {
-        const newOffset = {
+        setOffsetState({
           x: offsetRef.current.x + gs.dx,
           y: offsetRef.current.y + gs.dy,
-        };
-        setOffsetState(newOffset);
+        });
       },
       onPanResponderRelease: (_, gs) => {
         offsetRef.current = {
@@ -133,7 +149,6 @@ export const TileMap: React.FC<Props> = ({
   const zoomIn = () => setZoom((z) => Math.min(z + 1, 18));
   const zoomOut = () => {
     setZoom((z) => Math.max(z - 1, 12));
-    // 缩放时重置偏移避免位置错位
     offsetRef.current = { x: 0, y: 0 };
     setOffsetState({ x: 0, y: 0 });
   };
@@ -156,7 +171,7 @@ export const TileMap: React.FC<Props> = ({
       }
     }
     return result;
-  }, [centerTile, GRID]);
+  }, [centerTile]);
 
   const originTileX = centerTile.x - Math.floor(GRID / 2) - EXTRA;
   const originTileY = centerTile.y - Math.floor(GRID / 2) - EXTRA;
@@ -173,12 +188,38 @@ export const TileMap: React.FC<Props> = ({
     });
   }, [markers, zoom, originTileX, originTileY, tileDisplaySize]);
 
+  // 装饰元素位置
+  const decorations = useMemo(() => {
+    if (!showOverlay) return [];
+    const decors: { x: number; y: number; emoji: string; size: number; opacity: number }[] = [];
+    const half = Math.floor(GRID / 2);
+    for (let row = -1; row < GRID + 1; row++) {
+      for (let col = -1; col < GRID + 1; col++) {
+        const tileX = centerTile.x - half + col;
+        const tileY = centerTile.y - half + row;
+        // 每个瓦片内生成几个装饰
+        for (let i = 0; i < 3; i++) {
+          const subHash = (tileX * 31 + tileY * 17 + i * 7) % 100;
+          const dec = getDecoration(tileX + i * 13, tileY + i * 7);
+          if (dec) {
+            const px = (col + EXTRA) * tileDisplaySize + (subHash / 100) * tileDisplaySize;
+            const py = (row + EXTRA) * tileDisplaySize + ((subHash * 3 + 20) % 100) / 100 * tileDisplaySize;
+            decors.push({ x: px, y: py, ...dec });
+          }
+        }
+      }
+    }
+    return decors;
+  }, [centerTile, showOverlay, tileDisplaySize]);
+
   const totalGridW = (GRID + EXTRA * 2) * tileDisplaySize;
   const baseLeft = (SCREEN_WIDTH - totalGridW) / 2;
   const baseTop = (height - totalGridW) / 2;
 
+  const isDarkStyle = mapStyle === 'dark';
+
   return (
-    <View style={[styles.container, { height }]} {...panResponder.panHandlers}>
+    <View style={[styles.container, { height, backgroundColor: isDarkStyle ? '#1a1a2e' : '#F8F6F0' }]} {...panResponder.panHandlers}>
       <View
         style={{
           position: 'absolute',
@@ -188,9 +229,10 @@ export const TileMap: React.FC<Props> = ({
           top: baseTop + offsetState.y,
         }}
       >
+        {/* 瓦片底图 */}
         {tiles.map((tile) => (
           <Image
-            key={`${zoom}-${tile.x}-${tile.y}`}
+            key={`${zoom}-${tile.x}-${tile.y}-${mapStyle}`}
             source={{
               uri: tileUrl.replace('{z}', String(zoom)).replace('{x}', String(tile.x)).replace('{y}', String(tile.y)),
             }}
@@ -204,6 +246,31 @@ export const TileMap: React.FC<Props> = ({
             resizeMode="cover"
           />
         ))}
+
+        {/* 插画叠加层 — 纸张纹理 + 装饰元素 */}
+        {showOverlay && (
+          <>
+            {/* 半透明暖色叠加 — 给底图一个"纸张感" */}
+            <View style={styles.paperOverlay} />
+
+            {/* 散布的装饰emoji */}
+            {decorations.map((d, i) => (
+              <Text
+                key={`dec-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: d.x,
+                  top: d.y,
+                  fontSize: d.size,
+                  opacity: d.opacity,
+                  zIndex: 2,
+                }}
+              >
+                {d.emoji}
+              </Text>
+            ))}
+          </>
+        )}
 
         {/* 心情路径连线 */}
         {markerPositions.length >= 2 &&
@@ -222,12 +289,12 @@ export const TileMap: React.FC<Props> = ({
                   left: m.px,
                   top: m.py - 1,
                   width: length,
-                  height: 2,
-                  backgroundColor: Colors.primary + '25',
+                  height: 3,
+                  backgroundColor: isDarkStyle ? 'rgba(155,143,255,0.3)' : 'rgba(124,108,240,0.2)',
                   transform: [{ rotate: `${angle}deg` }],
                   transformOrigin: 'left center',
-                  zIndex: 1,
-                  borderRadius: 1,
+                  zIndex: 3,
+                  borderRadius: 1.5,
                 }}
               />
             );
@@ -240,8 +307,8 @@ export const TileMap: React.FC<Props> = ({
             style={[
               styles.marker,
               {
-                left: m.px - 20,
-                top: m.py - 20,
+                left: m.px - 22,
+                top: m.py - 22,
                 borderColor: m.moodColor,
               },
             ]}
@@ -257,28 +324,30 @@ export const TileMap: React.FC<Props> = ({
           </TouchableOpacity>
         ))}
 
-        {/* 用户位置蓝点 */}
-        <View style={[styles.userPulse, { left: userPixel.x - 16, top: userPixel.y - 16 }]} />
-        <View style={[styles.userDot, { left: userPixel.x - 8, top: userPixel.y - 8 }]} />
+        {/* 用户位置 */}
+        <View style={[styles.userPulse, { left: userPixel.x - 18, top: userPixel.y - 18 }]} />
+        <View style={[styles.userDot, { left: userPixel.x - 9, top: userPixel.y - 9 }]} />
       </View>
 
-      {/* 缩放 + 定位按钮 */}
+      {/* 控制按钮 */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.controlBtn} onPress={zoomIn} activeOpacity={0.7}>
-          <Text style={styles.controlText}>+</Text>
+        <TouchableOpacity style={[styles.controlBtn, isDarkStyle ? styles.controlBtnDark : undefined]} onPress={zoomIn} activeOpacity={0.7}>
+          <Text style={[styles.controlText, isDarkStyle ? { color: '#FFF' } : undefined]}>+</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.controlBtn} onPress={zoomOut} activeOpacity={0.7}>
-          <Text style={styles.controlText}>−</Text>
+        <TouchableOpacity style={[styles.controlBtn, isDarkStyle ? styles.controlBtnDark : undefined]} onPress={zoomOut} activeOpacity={0.7}>
+          <Text style={[styles.controlText, isDarkStyle ? { color: '#FFF' } : undefined]}>−</Text>
         </TouchableOpacity>
         <View style={styles.controlSpacer} />
-        <TouchableOpacity style={styles.controlBtn} onPress={recenter} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.controlBtn, isDarkStyle ? styles.controlBtnDark : undefined]} onPress={recenter} activeOpacity={0.7}>
           <View style={styles.recenterIcon}>
             <View style={styles.recenterDot} />
           </View>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.attribution}>© OpenStreetMap © CARTO</Text>
+      <Text style={[styles.attribution, isDarkStyle ? { color: 'rgba(255,255,255,0.3)' } : undefined]}>
+        © OpenStreetMap © CARTO
+      </Text>
     </View>
   );
 };
@@ -286,8 +355,18 @@ export const TileMap: React.FC<Props> = ({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    backgroundColor: '#F5F0EB',
   },
+  // 纸张纹理叠加
+  paperOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(252, 248, 240, 0.25)',
+    zIndex: 1,
+  },
+  // 用户位置
   userPulse: {
     position: 'absolute',
     width: 36,
@@ -311,6 +390,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+  // 标记
   marker: {
     position: 'absolute',
     width: 44,
@@ -332,23 +412,24 @@ const styles = StyleSheet.create({
   },
   markerCountBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#EF4444',
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF7EB3',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   markerCountText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
   },
+  // 控制
   controls: {
     position: 'absolute',
     right: 16,
@@ -363,16 +444,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
+    shadowColor: '#7C6CF0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 3,
+  },
+  controlBtnDark: {
+    backgroundColor: 'rgba(50,48,70,0.9)',
   },
   controlText: {
     fontSize: 22,
     fontWeight: '300',
-    color: '#1C1917',
+    color: '#2D2B3D',
     marginTop: -1,
   },
   controlSpacer: {
@@ -383,7 +467,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#6366F1',
+    borderColor: '#7C6CF0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -391,13 +475,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#7C6CF0',
   },
   attribution: {
     position: 'absolute',
     bottom: 6,
     left: 10,
     fontSize: 9,
-    color: 'rgba(0,0,0,0.3)',
+    color: 'rgba(0,0,0,0.25)',
   },
 });
