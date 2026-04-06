@@ -30,7 +30,7 @@ export const MapScreen: React.FC = () => {
   const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
   const [showLocationTimeline, setShowLocationTimeline] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
-  const [mapStyle, setMapStyle] = useState<MapStyleKey>('illustrated');
+  const [mapStyle, setMapStyle] = useState<MapStyleKey>('soft');
   const [showStylePicker, setShowStylePicker] = useState(false);
 
   useEffect(() => {
