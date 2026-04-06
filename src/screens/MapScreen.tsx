@@ -10,16 +10,17 @@ import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
 import { TileMap, MAP_STYLES, MapStyleKey } from '../components/TileMap';
+import { MapboxWebView } from '../components/MapboxWebView';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
 
-// 尝试加载 Mapbox（开发构建时可用）
+// 尝试加载原生 Mapbox（开发构建时可用）
 let MapboxMapView: any = null;
 try {
   MapboxMapView = require('../components/MapboxMapView').MapboxMapView;
 } catch {
-  // Expo Go 环境下 Mapbox 不可用，使用 TileMap fallback
+  // Expo Go 环境下原生 Mapbox 不可用，使用 WebView 版本
 }
 import { QuickRecordPanel } from '../components/QuickRecordPanel';
 import { LocationTimeline } from '../components/LocationTimeline';
@@ -105,7 +106,7 @@ export const MapScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 全屏地图 — Mapbox 或 TileMap fallback */}
+      {/* 全屏地图 — 原生 Mapbox > WebView Mapbox > TileMap */}
       {MapboxMapView ? (
         <MapboxMapView
           location={location}
@@ -113,12 +114,10 @@ export const MapScreen: React.FC = () => {
           onMarkerPress={handleMarkerPress}
         />
       ) : (
-        <TileMap
+        <MapboxWebView
           location={location}
           markers={clusteredMarkers}
           onMarkerPress={handleMarkerPress}
-          zoom={17}
-          mapStyle={mapStyle}
         />
       )}
 
