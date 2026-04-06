@@ -57,8 +57,8 @@ export const TimelineFilters: React.FC<Props> = ({
         ))}
       </View>
 
-      {/* 城市筛选 */}
-      {cities.length > 1 && (
+      {/* 城市/地点筛选 */}
+      {cities.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cityScroll}>
           <TouchableOpacity
             style={[styles.cityChip, selectedCity === null ? styles.cityChipActive : undefined]}
