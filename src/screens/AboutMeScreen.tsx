@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
+import { useAppColors } from '../hooks/useAppColors';
 import { MOOD_OPTIONS } from '../constants/moods';
 import { MoodType } from '../types';
 import dayjs from 'dayjs';
@@ -19,6 +20,7 @@ import { Achievements } from '../components/Achievements';
 
 export const AboutMeScreen: React.FC = () => {
   const { entries } = useEntries();
+  const colors = useAppColors();
 
   const streakDays = useMemo(() => {
     if (entries.length === 0) return 0;
@@ -48,7 +50,7 @@ export const AboutMeScreen: React.FC = () => {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
@@ -63,10 +65,10 @@ export const AboutMeScreen: React.FC = () => {
       {/* 回忆区域 */}
       {entries.length > 0 && (
         <>
-          <Text style={styles.sectionHeader}>回忆</Text>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>回忆</Text>
 
           {/* 心情分布柱状图 */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={styles.cardTitle}>心情分布</Text>
             {MOOD_OPTIONS.map((mood) => {
               const count = moodCounts[mood.type] || 0;

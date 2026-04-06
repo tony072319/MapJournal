@@ -6,8 +6,36 @@ import { UserLocation } from '../types';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-// CartoDB Voyager — 干净、彩色、无需API key
-const TILE_URL = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+// 地图风格 — 所有免费无需API key
+export const MAP_STYLES = {
+  voyager: {
+    url: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+    label: '彩色',
+    icon: '🗺️',
+  },
+  watercolor: {
+    url: 'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg',
+    label: '水彩',
+    icon: '🎨',
+  },
+  topo: {
+    url: 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+    label: '地形',
+    icon: '⛰️',
+  },
+  dark: {
+    url: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+    label: '暗色',
+    icon: '🌙',
+  },
+  minimal: {
+    url: 'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png',
+    label: '极简',
+    icon: '⬜',
+  },
+};
+
+export type MapStyleKey = keyof typeof MAP_STYLES;
 
 const latLngToTile = (lat: number, lng: number, zoom: number) => {
   const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
@@ -51,6 +79,7 @@ interface Props {
   onMarkerPress?: (id: string) => void;
   height?: number;
   zoom?: number;
+  mapStyle?: MapStyleKey;
 }
 
 export const TileMap: React.FC<Props> = ({
@@ -59,7 +88,9 @@ export const TileMap: React.FC<Props> = ({
   onMarkerPress,
   height = SCREEN_HEIGHT,
   zoom: initialZoom = 18,
+  mapStyle = 'voyager',
 }) => {
+  const tileUrl = MAP_STYLES[mapStyle]?.url || MAP_STYLES.voyager.url;
   const GRID = 5;
   const EXTRA = 2;
   const tileDisplaySize = SCREEN_WIDTH / GRID;
@@ -161,7 +192,7 @@ export const TileMap: React.FC<Props> = ({
           <Image
             key={`${zoom}-${tile.x}-${tile.y}`}
             source={{
-              uri: TILE_URL.replace('{z}', String(zoom)).replace('{x}', String(tile.x)).replace('{y}', String(tile.y)),
+              uri: tileUrl.replace('{z}', String(zoom)).replace('{x}', String(tile.x)).replace('{y}', String(tile.y)),
             }}
             style={{
               position: 'absolute',

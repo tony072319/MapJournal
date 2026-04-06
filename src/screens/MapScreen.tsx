@@ -9,7 +9,7 @@ import {
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
-import { TileMap } from '../components/TileMap';
+import { TileMap, MAP_STYLES, MapStyleKey } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
@@ -30,6 +30,8 @@ export const MapScreen: React.FC = () => {
   const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
   const [showLocationTimeline, setShowLocationTimeline] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [mapStyle, setMapStyle] = useState<MapStyleKey>('watercolor');
+  const [showStylePicker, setShowStylePicker] = useState(false);
 
   useEffect(() => {
     try {
@@ -101,6 +103,7 @@ export const MapScreen: React.FC = () => {
         markers={clusteredMarkers}
         onMarkerPress={handleMarkerPress}
         zoom={17}
+        mapStyle={mapStyle}
       />
 
       {/* 顶部浮动标题栏 */}
@@ -115,16 +118,46 @@ export const MapScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* 好友按钮 — 点击弹出提示 */}
+      {/* 左侧按钮 */}
       <View style={styles.socialButtons}>
-        <TouchableOpacity
-          style={styles.socialBtn}
-          onPress={handleFriendPress}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.socialBtn} onPress={handleFriendPress} activeOpacity={0.7}>
           <Text style={styles.socialBtnText}>👥 好友</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.socialBtn, { marginTop: 8 }]}
+          onPress={() => setShowStylePicker(!showStylePicker)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.socialBtnText}>
+            {MAP_STYLES[mapStyle].icon} 地图
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* 地图风格选择器 */}
+      {showStylePicker && (
+        <View style={styles.stylePicker}>
+          {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.styleOption,
+                mapStyle === key ? styles.styleOptionActive : undefined,
+              ]}
+              onPress={() => { setMapStyle(key); setShowStylePicker(false); }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.styleIcon}>{MAP_STYLES[key].icon}</Text>
+              <Text style={[
+                styles.styleLabel,
+                mapStyle === key ? styles.styleLabelActive : undefined,
+              ]}>
+                {MAP_STYLES[key].label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* 快速记录面板 — 贴近底部Tab栏 */}
       <View style={styles.quickBarContainer}>
@@ -254,6 +287,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
+  },
+  stylePicker: {
+    position: 'absolute',
+    top: 56,
+    left: 110,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderRadius: 16,
+    padding: 8,
+    shadowColor: '#7C6CF0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  styleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  styleOptionActive: {
+    backgroundColor: Colors.primary + '15',
+  },
+  styleIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  styleLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  styleLabelActive: {
+    color: Colors.primary,
   },
   quickBarContainer: {
     position: 'absolute',

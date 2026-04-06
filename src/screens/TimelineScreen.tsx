@@ -13,6 +13,7 @@ import { useEntries } from '../context/EntriesContext';
 import { EntryDetail } from '../components/EntryDetail';
 import { TimelineFilters } from '../components/TimelineFilters';
 import { Colors, MoodColors } from '../constants/colors';
+import { useAppColors } from '../hooks/useAppColors';
 import { getMoodByType } from '../constants/moods';
 import { ACTIVITY_OPTIONS } from '../constants/activities';
 import { DailyPrompt } from '../components/DailyPrompt';
@@ -94,6 +95,7 @@ const TimelineItem = ({ entry, onPress }: { entry: Entry; onPress: () => void })
 
 export const TimelineScreen: React.FC = () => {
   const { entries, refreshEntries } = useEntries();
+  const colors = useAppColors();
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
@@ -163,7 +165,7 @@ export const TimelineScreen: React.FC = () => {
 
   if (entries.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         {/* 时间线视觉隐喻 */}
         <View style={styles.emptyTimeline}>
           <View style={styles.emptyTimelineLine} />
@@ -180,7 +182,7 @@ export const TimelineScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
