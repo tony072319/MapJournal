@@ -6,8 +6,8 @@ import { UserLocation } from '../types';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TILE_SIZE = 256;
 
-// 柔和卡通风地图瓦片 — Stadia Alidade Smooth (干净、柔和、极简)
-const TILE_URL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}@2x.png';
+// CartoDB Voyager — 干净、彩色、无需API key
+const TILE_URL = 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
 
 const latLngToTile = (lat: number, lng: number, zoom: number) => {
   const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom));
