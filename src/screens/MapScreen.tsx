@@ -13,6 +13,14 @@ import { TileMap, MAP_STYLES, MapStyleKey } from '../components/TileMap';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
+
+// 尝试加载 Mapbox（开发构建时可用）
+let MapboxMapView: any = null;
+try {
+  MapboxMapView = require('../components/MapboxMapView').MapboxMapView;
+} catch {
+  // Expo Go 环境下 Mapbox 不可用，使用 TileMap fallback
+}
 import { QuickRecordPanel } from '../components/QuickRecordPanel';
 import { LocationTimeline } from '../components/LocationTimeline';
 import { FriendsModal } from '../components/FriendsModal';
@@ -97,14 +105,22 @@ export const MapScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 全屏地图 — zoom 17 更近 */}
-      <TileMap
-        location={location}
-        markers={clusteredMarkers}
-        onMarkerPress={handleMarkerPress}
-        zoom={17}
-        mapStyle={mapStyle}
-      />
+      {/* 全屏地图 — Mapbox 或 TileMap fallback */}
+      {MapboxMapView ? (
+        <MapboxMapView
+          location={location}
+          markers={clusteredMarkers}
+          onMarkerPress={handleMarkerPress}
+        />
+      ) : (
+        <TileMap
+          location={location}
+          markers={clusteredMarkers}
+          onMarkerPress={handleMarkerPress}
+          zoom={17}
+          mapStyle={mapStyle}
+        />
+      )}
 
       {/* 顶部浮动标题栏 */}
       <View style={styles.topOverlay}>
@@ -123,19 +139,21 @@ export const MapScreen: React.FC = () => {
         <TouchableOpacity style={styles.socialBtn} onPress={handleFriendPress} activeOpacity={0.7}>
           <Text style={styles.socialBtnText}>👥 好友</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.socialBtn, { marginTop: 8 }]}
-          onPress={() => setShowStylePicker(!showStylePicker)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.socialBtnText}>
+        {!MapboxMapView && (
+          <TouchableOpacity
+            style={[styles.socialBtn, { marginTop: 8 }]}
+            onPress={() => setShowStylePicker(!showStylePicker)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.socialBtnText}>
             {MAP_STYLES[mapStyle].icon} 地图
           </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 地图风格选择器 */}
-      {showStylePicker && (
+      {!MapboxMapView && showStylePicker && (
         <View style={styles.stylePicker}>
           {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
             <TouchableOpacity
