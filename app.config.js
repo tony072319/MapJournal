@@ -43,13 +43,6 @@ module.exports = {
       'expo-location',
       'expo-image-picker',
       'expo-sqlite',
-      [
-        '@rnmapbox/maps',
-        {
-          RNMapboxMapsImpl: 'mapbox',
-          RNMapboxMapsDownloadToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN || 'YOUR_TOKEN',
-        },
-      ],
     ],
   },
 };
