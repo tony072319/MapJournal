@@ -215,39 +215,73 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 </div>
 
 <div class="attribution">\u00a9 Mapbox \u00a9 OpenStreetMap</div>
-<div id="debug" style="position:absolute;top:60px;left:10px;background:rgba(0,0,0,0.7);color:#0f0;font-size:10px;padding:6px 10px;border-radius:6px;z-index:999;font-family:monospace;max-width:90%;word-break:break-all;"></div>
 
 <script>
-var debugEl = document.getElementById('debug');
-function dbg(msg) { debugEl.textContent += msg + '\\n'; }
-
-var token = '${MAPBOX_TOKEN}';
-dbg('Token: ' + (token ? token.substring(0,10) + '...' : 'EMPTY!'));
-
-try {
-  mapboxgl.accessToken = token;
-  dbg('mapboxgl loaded OK');
-} catch(e) {
-  dbg('mapboxgl ERROR: ' + e.message);
-}
+mapboxgl.accessToken = '${MAPBOX_TOKEN}';
 
 var userLat = ${location.latitude};
 var userLng = ${location.longitude};
 var markerElements = [];
 
-try {
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
   zoom: 16,
-  style: 'mapbox://styles/mapbox/light-v11',
-  attributionControl: false,
-  logoPosition: 'bottom-left'
+  style: {
+    version: 8,
+    name: 'MapJournal Illustrated',
+    sources: {
+      'mapbox-streets': {
+        type: 'vector',
+        url: 'mapbox://mapbox.mapbox-streets-v8'
+      }
+    },
+    glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
+    sprite: 'mapbox://sprites/mapbox/light-v11',
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#FFF8F0' } },
+      { id: 'water', type: 'fill', source: 'mapbox-streets', 'source-layer': 'water',
+        paint: { 'fill-color': '#B8D4E3', 'fill-opacity': 0.7 } },
+      { id: 'landuse-park', type: 'fill', source: 'mapbox-streets', 'source-layer': 'landuse',
+        filter: ['==', 'class', 'park'],
+        paint: { 'fill-color': '#C8E6C0', 'fill-opacity': 0.6 } },
+      { id: 'landuse-grass', type: 'fill', source: 'mapbox-streets', 'source-layer': 'landuse',
+        filter: ['in', 'class', 'grass', 'scrub'],
+        paint: { 'fill-color': '#D5EDCC', 'fill-opacity': 0.4 } },
+      { id: 'building', type: 'fill', source: 'mapbox-streets', 'source-layer': 'building',
+        paint: { 'fill-color': '#E8E0D8', 'fill-opacity': 0.6, 'fill-outline-color': '#D8CFBE' } },
+      { id: 'road-motorway', type: 'line', source: 'mapbox-streets', 'source-layer': 'road',
+        filter: ['in', 'class', 'motorway', 'trunk'],
+        paint: { 'line-color': '#F2D5A0', 'line-width': 3, 'line-opacity': 0.8 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' } },
+      { id: 'road-primary', type: 'line', source: 'mapbox-streets', 'source-layer': 'road',
+        filter: ['in', 'class', 'primary', 'secondary'],
+        paint: { 'line-color': '#E8DFD0', 'line-width': 2, 'line-opacity': 0.8 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' } },
+      { id: 'road-street', type: 'line', source: 'mapbox-streets', 'source-layer': 'road',
+        filter: ['in', 'class', 'tertiary', 'street', 'service', 'path', 'pedestrian'],
+        paint: { 'line-color': '#F0E8DC', 'line-width': 1, 'line-opacity': 0.6 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' } },
+      { id: 'poi-label', type: 'symbol', source: 'mapbox-streets', 'source-layer': 'poi_label',
+        filter: ['<=', 'filterrank', 2],
+        layout: { 'text-field': ['get', 'name'], 'text-size': 10,
+          'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'],
+          'icon-image': ['get', 'maki'], 'icon-size': 0.7, 'icon-allow-overlap': false },
+        paint: { 'text-color': '#C4A882', 'text-halo-color': '#FFF8F0', 'text-halo-width': 1.5,
+          'icon-opacity': 0.6 } },
+      { id: 'road-label', type: 'symbol', source: 'mapbox-streets', 'source-layer': 'road',
+        filter: ['in', 'class', 'primary', 'secondary', 'tertiary', 'motorway', 'trunk'],
+        layout: { 'text-field': ['get', 'name'], 'text-size': 10, 'symbol-placement': 'line',
+          'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'] },
+        paint: { 'text-color': '#B8A48C', 'text-halo-color': '#FFF8F0', 'text-halo-width': 1.2 } },
+      { id: 'place-label', type: 'symbol', source: 'mapbox-streets', 'source-layer': 'place_label',
+        layout: { 'text-field': ['get', 'name'], 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 12, 15, 14],
+          'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'] },
+        paint: { 'text-color': '#9B8B78', 'text-halo-color': '#FFF8F0', 'text-halo-width': 1.5 } }
+    ]
+  },
+  attributionControl: false
 });
-
-map.on('load', function() { dbg('Map loaded!'); });
-map.on('error', function(e) { dbg('Map error: ' + (e.error ? e.error.message : JSON.stringify(e))); });
-} catch(e) { dbg('Map init ERROR: ' + e.message); }
 
 // Hide mapbox logo
 map.on('load', function() {
