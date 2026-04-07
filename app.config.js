@@ -1,13 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-// Robust .env loader that handles UTF-16 (PowerShell default) and UTF-8
+// Robust .env loader — handles both UTF-8 and UTF-16 LE (PowerShell default)
 function loadEnv() {
   const envPath = path.resolve(__dirname, '.env');
   try {
-    let content = fs.readFileSync(envPath, 'utf-8');
-    // Strip UTF-16 BOM and null bytes (PowerShell echo creates UTF-16 files)
-    content = content.replace(/\0/g, '').replace(/^\uFEFF/, '').replace(/^\uFFFE/, '');
+    const raw = fs.readFileSync(envPath);
+    let content;
+
+    // Detect UTF-16 LE BOM (bytes FF FE) — PowerShell's echo/> creates these
+    if (raw.length >= 2 && raw[0] === 0xFF && raw[1] === 0xFE) {
+      content = raw.toString('utf16le');
+    } else {
+      content = raw.toString('utf-8');
+    }
+
+    // Strip any BOM character and null bytes
+    content = content.replace(/^\uFEFF/, '').replace(/\0/g, '');
+
     const lines = content.split(/\r?\n/);
     for (const line of lines) {
       const match = line.match(/^\s*([\w.]+)\s*=\s*(.*?)\s*$/);
@@ -21,6 +31,13 @@ function loadEnv() {
 }
 
 loadEnv();
+
+// Log token status so user can verify in terminal
+const tokenLoaded = !!process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+console.log(tokenLoaded
+  ? '[MapJournal] Mapbox token loaded OK'
+  : '[MapJournal] WARNING: Mapbox token not found. Create .env file with: EXPO_PUBLIC_MAPBOX_TOKEN=pk.xxx'
+);
 
 module.exports = {
   expo: {
