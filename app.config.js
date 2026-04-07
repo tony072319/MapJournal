@@ -1,5 +1,26 @@
-// Load .env file
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+
+// Robust .env loader that handles UTF-16 (PowerShell default) and UTF-8
+function loadEnv() {
+  const envPath = path.resolve(__dirname, '.env');
+  try {
+    let content = fs.readFileSync(envPath, 'utf-8');
+    // Strip UTF-16 BOM and null bytes (PowerShell echo creates UTF-16 files)
+    content = content.replace(/\0/g, '').replace(/^\uFEFF/, '').replace(/^\uFFFE/, '');
+    const lines = content.split(/\r?\n/);
+    for (const line of lines) {
+      const match = line.match(/^\s*([\w.]+)\s*=\s*(.*?)\s*$/);
+      if (match) {
+        process.env[match[1]] = match[2];
+      }
+    }
+  } catch (e) {
+    // .env file not found, that's OK
+  }
+}
+
+loadEnv();
 
 module.exports = {
   expo: {
@@ -18,10 +39,10 @@ module.exports = {
     ios: {
       supportsTablet: true,
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: 'MapJournal需要访问你的位置来在地图上标记心情',
-        NSCameraUsageDescription: 'MapJournal需要使用相机来为心情记录拍照',
-        NSPhotoLibraryUsageDescription: 'MapJournal需要访问相册来选择照片',
-        NSMicrophoneUsageDescription: 'MapJournal需要麦克风来录制语音备忘',
+        NSLocationWhenInUseUsageDescription: 'MapJournal needs your location to mark mood on the map',
+        NSCameraUsageDescription: 'MapJournal needs camera to take photos for mood entries',
+        NSPhotoLibraryUsageDescription: 'MapJournal needs photo library access to select photos',
+        NSMicrophoneUsageDescription: 'MapJournal needs microphone to record voice memos',
       },
     },
     android: {

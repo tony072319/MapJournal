@@ -9,7 +9,6 @@ import {
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
-import { MAP_STYLES, MapStyleKey } from '../components/TileMap';
 import { MapboxWebView } from '../components/MapboxWebView';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
@@ -31,8 +30,6 @@ export const MapScreen: React.FC = () => {
   const [locationTimelineName, setLocationTimelineName] = useState<string | null>(null);
   const [showLocationTimeline, setShowLocationTimeline] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
-  const [mapStyle, setMapStyle] = useState<MapStyleKey>('soft');
-  const [showStylePicker, setShowStylePicker] = useState(false);
 
   useEffect(() => {
     try {
@@ -253,41 +250,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
-  },
-  stylePicker: {
-    position: 'absolute',
-    top: 56,
-    left: 110,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderRadius: 16,
-    padding: 8,
-    shadowColor: '#7C6CF0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  styleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  styleOptionActive: {
-    backgroundColor: Colors.primary + '15',
-  },
-  styleIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  styleLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  styleLabelActive: {
-    color: Colors.primary,
   },
   quickBarContainer: {
     position: 'absolute',
