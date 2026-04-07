@@ -1,3 +1,6 @@
+// Load .env file
+require('dotenv').config();
+
 module.exports = {
   expo: {
     name: 'MapJournal',
@@ -44,5 +47,8 @@ module.exports = {
       'expo-image-picker',
       'expo-sqlite',
     ],
+    extra: {
+      mapboxToken: process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '',
+    },
   },
 };
