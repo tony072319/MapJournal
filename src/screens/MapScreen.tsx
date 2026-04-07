@@ -9,19 +9,11 @@ import {
 import { useLocation } from '../hooks/useLocation';
 import { useEntries } from '../context/EntriesContext';
 import { Colors, MoodColors } from '../constants/colors';
-import { TileMap, MAP_STYLES, MapStyleKey } from '../components/TileMap';
+import { MAP_STYLES, MapStyleKey } from '../components/TileMap';
 import { MapboxWebView } from '../components/MapboxWebView';
 import { NewEntrySheet } from '../components/NewEntrySheet';
 import { EntryDetail } from '../components/EntryDetail';
 import { WelcomeOverlay } from '../components/WelcomeOverlay';
-
-// 尝试加载原生 Mapbox（开发构建时可用）
-let MapboxMapView: any = null;
-try {
-  MapboxMapView = require('../components/MapboxMapView').MapboxMapView;
-} catch {
-  // Expo Go 环境下原生 Mapbox 不可用，使用 WebView 版本
-}
 import { QuickRecordPanel } from '../components/QuickRecordPanel';
 import { LocationTimeline } from '../components/LocationTimeline';
 import { FriendsModal } from '../components/FriendsModal';
@@ -106,20 +98,12 @@ export const MapScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* 全屏地图 — 原生 Mapbox > WebView Mapbox > TileMap */}
-      {MapboxMapView ? (
-        <MapboxMapView
-          location={location}
-          markers={clusteredMarkers}
-          onMarkerPress={handleMarkerPress}
-        />
-      ) : (
-        <MapboxWebView
-          location={location}
-          markers={clusteredMarkers}
-          onMarkerPress={handleMarkerPress}
-        />
-      )}
+      {/* 全屏地图 — Mapbox WebView */}
+      <MapboxWebView
+        location={location}
+        markers={clusteredMarkers}
+        onMarkerPress={handleMarkerPress}
+      />
 
       {/* 顶部浮动标题栏 */}
       <View style={styles.topOverlay}>
@@ -138,43 +122,8 @@ export const MapScreen: React.FC = () => {
         <TouchableOpacity style={styles.socialBtn} onPress={handleFriendPress} activeOpacity={0.7}>
           <Text style={styles.socialBtnText}>👥 好友</Text>
         </TouchableOpacity>
-        {!MapboxMapView && (
-          <TouchableOpacity
-            style={[styles.socialBtn, { marginTop: 8 }]}
-            onPress={() => setShowStylePicker(!showStylePicker)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.socialBtnText}>
-            {MAP_STYLES[mapStyle].icon} 地图
-          </Text>
-          </TouchableOpacity>
-        )}
       </View>
 
-      {/* 地图风格选择器 */}
-      {!MapboxMapView && showStylePicker && (
-        <View style={styles.stylePicker}>
-          {(Object.keys(MAP_STYLES) as MapStyleKey[]).map((key) => (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.styleOption,
-                mapStyle === key ? styles.styleOptionActive : undefined,
-              ]}
-              onPress={() => { setMapStyle(key); setShowStylePicker(false); }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.styleIcon}>{MAP_STYLES[key].icon}</Text>
-              <Text style={[
-                styles.styleLabel,
-                mapStyle === key ? styles.styleLabelActive : undefined,
-              ]}>
-                {MAP_STYLES[key].label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       {/* 快速记录面板 — 贴近底部Tab栏 */}
       <View style={styles.quickBarContainer}>
