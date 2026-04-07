@@ -74,6 +74,9 @@ export const MapboxWebView: React.FC<Props> = ({
         javaScriptEnabled
         domStorageEnabled
         originWhitelist={['*']}
+        mixedContentMode="always"
+        allowsInlineMediaPlayback
+        onError={(e) => console.log('WebView error:', e.nativeEvent)}
       />
     </View>
   );
@@ -212,54 +215,39 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 </div>
 
 <div class="attribution">\u00a9 Mapbox \u00a9 OpenStreetMap</div>
+<div id="debug" style="position:absolute;top:60px;left:10px;background:rgba(0,0,0,0.7);color:#0f0;font-size:10px;padding:6px 10px;border-radius:6px;z-index:999;font-family:monospace;max-width:90%;word-break:break-all;"></div>
 
 <script>
-mapboxgl.accessToken = '${MAPBOX_TOKEN}';
+var debugEl = document.getElementById('debug');
+function dbg(msg) { debugEl.textContent += msg + '\\n'; }
+
+var token = '${MAPBOX_TOKEN}';
+dbg('Token: ' + (token ? token.substring(0,10) + '...' : 'EMPTY!'));
+
+try {
+  mapboxgl.accessToken = token;
+  dbg('mapboxgl loaded OK');
+} catch(e) {
+  dbg('mapboxgl ERROR: ' + e.message);
+}
 
 var userLat = ${location.latitude};
 var userLng = ${location.longitude};
 var markerElements = [];
 
+try {
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
   zoom: 16,
-  style: {
-    version: 8,
-    name: 'MapJournal Illustrated',
-    sources: {
-      'mapbox-streets': {
-        type: 'vector',
-        url: 'mapbox://mapbox.mapbox-streets-v8'
-      }
-    },
-    glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
-    layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#FAF7F2' } },
-      { id: 'water', type: 'fill', source: 'mapbox-streets', 'source-layer': 'water',
-        paint: { 'fill-color': '#C5DCE8', 'fill-opacity': 0.6 } },
-      { id: 'landuse-park', type: 'fill', source: 'mapbox-streets', 'source-layer': 'landuse',
-        filter: ['==', 'class', 'park'],
-        paint: { 'fill-color': '#DAF0D8', 'fill-opacity': 0.5 } },
-      { id: 'building', type: 'fill', source: 'mapbox-streets', 'source-layer': 'building',
-        paint: { 'fill-color': '#F0EDE6', 'fill-opacity': 0.4, 'fill-outline-color': '#E0DCD4' } },
-      { id: 'road-primary', type: 'line', source: 'mapbox-streets', 'source-layer': 'road',
-        filter: ['in', 'class', 'primary', 'secondary', 'trunk', 'motorway'],
-        paint: { 'line-color': '#E8DFD0', 'line-width': 2.5, 'line-opacity': 0.8 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' } },
-      { id: 'road-secondary', type: 'line', source: 'mapbox-streets', 'source-layer': 'road',
-        filter: ['in', 'class', 'tertiary', 'street', 'service'],
-        paint: { 'line-color': '#EDE8DF', 'line-width': 1, 'line-opacity': 0.6 },
-        layout: { 'line-cap': 'round', 'line-join': 'round' } },
-      { id: 'place-label', type: 'symbol', source: 'mapbox-streets', 'source-layer': 'place_label',
-        layout: { 'text-field': ['get', 'name'], 'text-size': 11,
-          'text-font': ['DIN Pro Regular', 'Arial Unicode MS Regular'] },
-        paint: { 'text-color': '#B0A89A', 'text-halo-color': '#FAF7F2', 'text-halo-width': 1.5 } }
-    ]
-  },
+  style: 'mapbox://styles/mapbox/light-v11',
   attributionControl: false,
   logoPosition: 'bottom-left'
 });
+
+map.on('load', function() { dbg('Map loaded!'); });
+map.on('error', function(e) { dbg('Map error: ' + (e.error ? e.error.message : JSON.stringify(e))); });
+} catch(e) { dbg('Map init ERROR: ' + e.message); }
 
 // Hide mapbox logo
 map.on('load', function() {
