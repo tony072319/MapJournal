@@ -89,7 +89,25 @@ function generateHTML(location: UserLocation, initialMarkers: MarkerData[]): str
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; }
-#map { width: 100%; height: 100%; }
+#map { width: 100%; height: 100%; position: relative; }
+
+/* Watercolor/illustrated filter on map canvas */
+#map canvas {
+  filter: saturate(0.35) contrast(0.85) brightness(1.08) sepia(0.12);
+}
+
+/* Paper texture overlay */
+#map::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 30% 20%, rgba(200,180,160,0.04) 0%, transparent 70%),
+              radial-gradient(ellipse at 70% 80%, rgba(180,200,210,0.04) 0%, transparent 70%);
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
 .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib { display: none !important; }
 
 .marker-container { cursor: pointer; position: relative; }
@@ -132,7 +150,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 
 .controls {
   position: absolute; right: 14px; top: 100px;
-  display: flex; flex-direction: column; gap: 6px; z-index: 10;
+  display: flex; flex-direction: column; gap: 6px; z-index: 20;
 }
 .ctrl-btn {
   width: 38px; height: 38px; border-radius: 19px;
@@ -154,8 +172,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 .attr {
   position: absolute; bottom: 4px; left: 8px;
   font-size: 8px; color: rgba(0,0,0,0.12);
-  font-family: -apple-system, sans-serif; z-index: 10;
+  font-family: -apple-system, sans-serif; z-index: 20;
 }
+.mapboxgl-marker { z-index: 15 !important; }
 </style>
 </head>
 <body>
