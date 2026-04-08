@@ -189,7 +189,7 @@ var map = new mapboxgl.Map({
   bearing: 0
 });
 
-// After map loads, restyle all layers to our warm pastel palette
+// After map loads, restyle to watercolor illustrated style
 map.on('style.load', function() {
   // Hide Mapbox logo
   document.querySelectorAll('.mapboxgl-ctrl-logo').forEach(function(el) {
@@ -204,100 +204,120 @@ map.on('style.load', function() {
     var type = layer.type;
 
     try {
-      // Background — warm cream
+      // Background — soft paper white
       if (type === 'background') {
-        map.setPaintProperty(id, 'background-color', '#FFF5EE');
+        map.setPaintProperty(id, 'background-color', '#F7F5F0');
       }
 
-      // Water — soft pastel blue
+      // Water — soft watercolor blue-gray wash
       if (id.includes('water')) {
         if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#BDDCE8');
+          map.setPaintProperty(id, 'fill-color', '#C4D7E3');
+          map.setPaintProperty(id, 'fill-opacity', 0.55);
         } else if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#A8CCDb');
+          map.setPaintProperty(id, 'line-color', '#B0C8D8');
+          map.setPaintProperty(id, 'line-opacity', 0.4);
         }
       }
 
-      // Parks & green areas — soft mint green
-      if (id.includes('park') || id.includes('green') || id.includes('grass') || id.includes('golf') || id.includes('cemetery') || id.includes('pitch')) {
+      // Parks & green — soft sage watercolor
+      if (id.includes('park') || id.includes('green') || id.includes('grass') || id.includes('golf') || id.includes('cemetery') || id.includes('pitch') || id.includes('garden')) {
         if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#D4EDCB');
-          map.setPaintProperty(id, 'fill-opacity', 0.7);
+          map.setPaintProperty(id, 'fill-color', '#D5E5CE');
+          map.setPaintProperty(id, 'fill-opacity', 0.45);
         }
       }
 
-      // Land use general
+      // Land use general — barely tinted
       if (id.includes('landuse') && !id.includes('park') && !id.includes('green')) {
         if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#FFF0E6');
-          map.setPaintProperty(id, 'fill-opacity', 0.5);
+          map.setPaintProperty(id, 'fill-color', '#F0EDE6');
+          map.setPaintProperty(id, 'fill-opacity', 0.3);
         }
       }
 
-      // Buildings — warm sand
+      // Buildings — very faint, like pencil sketch outlines
       if (id.includes('building')) {
         if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#EDE4D8');
-          map.setPaintProperty(id, 'fill-opacity', 0.65);
+          map.setPaintProperty(id, 'fill-color', '#EBE7E0');
+          map.setPaintProperty(id, 'fill-opacity', 0.35);
         }
         if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#DDD4C6');
+          map.setPaintProperty(id, 'line-color', '#DDD8D0');
+          map.setPaintProperty(id, 'line-opacity', 0.25);
         }
       }
 
-      // Roads — warm tones
+      // Roads — thin, pencil-sketch style lines
       if (id.includes('road') || id.includes('bridge') || id.includes('tunnel')) {
         if (type === 'line') {
-          if (id.includes('motorway') || id.includes('trunk')) {
-            map.setPaintProperty(id, 'line-color', '#F5D5A8');
-          } else if (id.includes('primary') || id.includes('secondary')) {
-            map.setPaintProperty(id, 'line-color', '#F0E0C8');
-          } else if (id.includes('street') || id.includes('tertiary') || id.includes('link')) {
-            map.setPaintProperty(id, 'line-color', '#F5EDE0');
-          } else if (id.includes('service') || id.includes('path') || id.includes('pedestrian') || id.includes('track')) {
-            map.setPaintProperty(id, 'line-color', '#F5EEE5');
-          } else if (id.includes('case') || id.includes('casing')) {
-            map.setPaintProperty(id, 'line-color', '#EAD8C0');
-            map.setPaintProperty(id, 'line-opacity', 0.3);
-          } else {
-            map.setPaintProperty(id, 'line-color', '#F0E4D4');
+          // Casings (road borders) — make extremely subtle
+          if (id.includes('case') || id.includes('casing')) {
+            map.setPaintProperty(id, 'line-color', '#E0DCD5');
+            map.setPaintProperty(id, 'line-opacity', 0.15);
+          }
+          // Motorways/trunk — thin, muted warm gray
+          else if (id.includes('motorway') || id.includes('trunk')) {
+            map.setPaintProperty(id, 'line-color', '#D8D0C4');
+            map.setPaintProperty(id, 'line-width', 1.8);
+            map.setPaintProperty(id, 'line-opacity', 0.7);
+          }
+          // Primary/secondary — thinner
+          else if (id.includes('primary') || id.includes('secondary')) {
+            map.setPaintProperty(id, 'line-color', '#DDD6CC');
+            map.setPaintProperty(id, 'line-width', 1.2);
+            map.setPaintProperty(id, 'line-opacity', 0.6);
+          }
+          // Small streets — very thin like pencil lines
+          else if (id.includes('street') || id.includes('tertiary') || id.includes('link')) {
+            map.setPaintProperty(id, 'line-color', '#E2DDD5');
+            map.setPaintProperty(id, 'line-width', 0.8);
+            map.setPaintProperty(id, 'line-opacity', 0.5);
+          }
+          // Paths/pedestrian — faintest
+          else if (id.includes('service') || id.includes('path') || id.includes('pedestrian') || id.includes('track')) {
+            map.setPaintProperty(id, 'line-color', '#E5E0D8');
+            map.setPaintProperty(id, 'line-width', 0.5);
+            map.setPaintProperty(id, 'line-opacity', 0.35);
+          }
+          else {
+            map.setPaintProperty(id, 'line-color', '#DDD8D0');
+            map.setPaintProperty(id, 'line-opacity', 0.5);
           }
         }
       }
 
-      // Labels — warm brown tones
+      // Labels — delicate, muted gray-brown like handwritten notes
       if (type === 'symbol') {
         if (id.includes('place') || id.includes('settlement')) {
-          map.setPaintProperty(id, 'text-color', '#8B7B6B');
-          map.setPaintProperty(id, 'text-halo-color', '#FFF5EE');
-          map.setPaintProperty(id, 'text-halo-width', 1.5);
+          map.setPaintProperty(id, 'text-color', '#9B9088');
+          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
+          map.setPaintProperty(id, 'text-halo-width', 1.8);
         } else if (id.includes('road') || id.includes('street')) {
-          map.setPaintProperty(id, 'text-color', '#A89880');
-          map.setPaintProperty(id, 'text-halo-color', '#FFF5EE');
-          map.setPaintProperty(id, 'text-halo-width', 1.2);
+          map.setPaintProperty(id, 'text-color', '#B5ADA2');
+          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
+          map.setPaintProperty(id, 'text-halo-width', 1.5);
         } else if (id.includes('poi') || id.includes('transit')) {
-          map.setPaintProperty(id, 'text-color', '#B8A490');
-          map.setPaintProperty(id, 'text-halo-color', '#FFF5EE');
+          map.setPaintProperty(id, 'text-color', '#B8B0A5');
+          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
           map.setPaintProperty(id, 'text-halo-width', 1.2);
-          // Soften POI icons
-          try { map.setPaintProperty(id, 'icon-opacity', 0.5); } catch(e) {}
+          try { map.setPaintProperty(id, 'icon-opacity', 0.35); } catch(e) {}
         } else {
-          map.setPaintProperty(id, 'text-color', '#A09080');
-          try { map.setPaintProperty(id, 'text-halo-color', '#FFF5EE'); } catch(e) {}
+          map.setPaintProperty(id, 'text-color', '#A8A098');
+          try { map.setPaintProperty(id, 'text-halo-color', '#F7F5F0'); } catch(e) {}
+          try { map.setPaintProperty(id, 'text-halo-width', 1.5); } catch(e) {}
         }
       }
 
-      // Admin boundaries — very subtle
+      // Admin boundaries — barely visible
       if (id.includes('admin') || id.includes('boundary')) {
         if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#E0D4C4');
-          map.setPaintProperty(id, 'line-opacity', 0.3);
+          map.setPaintProperty(id, 'line-color', '#D8D2C8');
+          map.setPaintProperty(id, 'line-opacity', 0.15);
         }
       }
 
-    } catch(e) {
-      // Some properties might not exist on certain layers, skip silently
-    }
+    } catch(e) {}
   });
 });
 
@@ -367,5 +387,5 @@ updateMarkers(${JSON.stringify(initialMarkers)});
 
 const styles = StyleSheet.create({
   container: { overflow: 'hidden' },
-  webview: { flex: 1, backgroundColor: '#FFF5EE' },
+  webview: { flex: 1, backgroundColor: '#F7F5F0' },
 });
