@@ -178,15 +178,15 @@ var userLat = ${location.latitude};
 var userLng = ${location.longitude};
 var markerElements = [];
 
-// Custom dramatic style from Mapbox Studio with 3D buildings
+// Custom cartoon illustrated style from Mapbox Studio
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
-  zoom: 16,
+  zoom: 15.5,
   style: 'mapbox://styles/tonybyao/cmnv1iel9005101sv4xf2bao2',
   attributionControl: false,
-  pitch: 45,
-  bearing: -17.6
+  pitch: 0,
+  bearing: 0
 });
 
 // Hide Mapbox logo after load
@@ -249,7 +249,7 @@ function updateUserLocation(lat, lng) {
 
 function zoomIn() { map.zoomTo(map.getZoom() + 1, { duration: 300 }); }
 function zoomOut() { map.zoomTo(map.getZoom() - 1, { duration: 300 }); }
-function recenter() { map.flyTo({ center: [userLng, userLat], zoom: 16, pitch: 45, bearing: -17.6, duration: 600 }); }
+function recenter() { map.flyTo({ center: [userLng, userLat], zoom: 15.5, pitch: 0, bearing: 0, duration: 600 }); }
 
 window.updateMarkers = updateMarkers;
 window.updateUserLocation = updateUserLocation;
