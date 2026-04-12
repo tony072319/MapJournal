@@ -89,25 +89,7 @@ function generateHTML(location: UserLocation, initialMarkers: MarkerData[]): str
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; }
-#map { width: 100%; height: 100%; position: relative; }
-
-/* Watercolor/illustrated filter on map canvas */
-#map canvas {
-  filter: saturate(0.35) contrast(0.85) brightness(1.08) sepia(0.12);
-}
-
-/* Paper texture overlay */
-#map::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 30% 20%, rgba(200,180,160,0.04) 0%, transparent 70%),
-              radial-gradient(ellipse at 70% 80%, rgba(180,200,210,0.04) 0%, transparent 70%);
-  mix-blend-mode: multiply;
-  z-index: 1;
-}
-
+#map { width: 100%; height: 100%; }
 .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib { display: none !important; }
 
 .marker-container { cursor: pointer; position: relative; }
@@ -196,147 +178,21 @@ var userLat = ${location.latitude};
 var userLng = ${location.longitude};
 var markerElements = [];
 
-// Use Mapbox light style as base — it has ALL detail layers (roads, POIs, transit, etc.)
-// Then we override colors after load to create our warm illustrated look
+// Custom watercolor style from Mapbox Studio
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
   zoom: 15,
-  style: 'mapbox://styles/mapbox/light-v11',
+  style: 'mapbox://styles/tonybyao/cmnv0y8ub001c01sra809d8he',
   attributionControl: false,
   pitch: 0,
   bearing: 0
 });
 
-// After map loads, restyle to watercolor illustrated style
-map.on('style.load', function() {
-  // Hide Mapbox logo
+// Hide Mapbox logo after load
+map.on('load', function() {
   document.querySelectorAll('.mapboxgl-ctrl-logo').forEach(function(el) {
     el.style.display = 'none';
-  });
-
-  var style = map.getStyle();
-  if (!style || !style.layers) return;
-
-  style.layers.forEach(function(layer) {
-    var id = layer.id;
-    var type = layer.type;
-
-    try {
-      // Background — soft paper white
-      if (type === 'background') {
-        map.setPaintProperty(id, 'background-color', '#F7F5F0');
-      }
-
-      // Water — soft watercolor blue-gray wash
-      if (id.includes('water')) {
-        if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#C4D7E3');
-          map.setPaintProperty(id, 'fill-opacity', 0.55);
-        } else if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#B0C8D8');
-          map.setPaintProperty(id, 'line-opacity', 0.4);
-        }
-      }
-
-      // Parks & green — soft sage watercolor
-      if (id.includes('park') || id.includes('green') || id.includes('grass') || id.includes('golf') || id.includes('cemetery') || id.includes('pitch') || id.includes('garden')) {
-        if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#D5E5CE');
-          map.setPaintProperty(id, 'fill-opacity', 0.45);
-        }
-      }
-
-      // Land use general — barely tinted
-      if (id.includes('landuse') && !id.includes('park') && !id.includes('green')) {
-        if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#F0EDE6');
-          map.setPaintProperty(id, 'fill-opacity', 0.3);
-        }
-      }
-
-      // Buildings — very faint, like pencil sketch outlines
-      if (id.includes('building')) {
-        if (type === 'fill') {
-          map.setPaintProperty(id, 'fill-color', '#EBE7E0');
-          map.setPaintProperty(id, 'fill-opacity', 0.35);
-        }
-        if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#DDD8D0');
-          map.setPaintProperty(id, 'line-opacity', 0.25);
-        }
-      }
-
-      // Roads — thin, pencil-sketch style lines
-      if (id.includes('road') || id.includes('bridge') || id.includes('tunnel')) {
-        if (type === 'line') {
-          // Casings (road borders) — make extremely subtle
-          if (id.includes('case') || id.includes('casing')) {
-            map.setPaintProperty(id, 'line-color', '#E0DCD5');
-            map.setPaintProperty(id, 'line-opacity', 0.15);
-          }
-          // Motorways/trunk — thin, muted warm gray
-          else if (id.includes('motorway') || id.includes('trunk')) {
-            map.setPaintProperty(id, 'line-color', '#D8D0C4');
-            map.setPaintProperty(id, 'line-width', 1.8);
-            map.setPaintProperty(id, 'line-opacity', 0.7);
-          }
-          // Primary/secondary — thinner
-          else if (id.includes('primary') || id.includes('secondary')) {
-            map.setPaintProperty(id, 'line-color', '#DDD6CC');
-            map.setPaintProperty(id, 'line-width', 1.2);
-            map.setPaintProperty(id, 'line-opacity', 0.6);
-          }
-          // Small streets — very thin like pencil lines
-          else if (id.includes('street') || id.includes('tertiary') || id.includes('link')) {
-            map.setPaintProperty(id, 'line-color', '#E2DDD5');
-            map.setPaintProperty(id, 'line-width', 0.8);
-            map.setPaintProperty(id, 'line-opacity', 0.5);
-          }
-          // Paths/pedestrian — faintest
-          else if (id.includes('service') || id.includes('path') || id.includes('pedestrian') || id.includes('track')) {
-            map.setPaintProperty(id, 'line-color', '#E5E0D8');
-            map.setPaintProperty(id, 'line-width', 0.5);
-            map.setPaintProperty(id, 'line-opacity', 0.35);
-          }
-          else {
-            map.setPaintProperty(id, 'line-color', '#DDD8D0');
-            map.setPaintProperty(id, 'line-opacity', 0.5);
-          }
-        }
-      }
-
-      // Labels — delicate, muted gray-brown like handwritten notes
-      if (type === 'symbol') {
-        if (id.includes('place') || id.includes('settlement')) {
-          map.setPaintProperty(id, 'text-color', '#9B9088');
-          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
-          map.setPaintProperty(id, 'text-halo-width', 1.8);
-        } else if (id.includes('road') || id.includes('street')) {
-          map.setPaintProperty(id, 'text-color', '#B5ADA2');
-          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
-          map.setPaintProperty(id, 'text-halo-width', 1.5);
-        } else if (id.includes('poi') || id.includes('transit')) {
-          map.setPaintProperty(id, 'text-color', '#B8B0A5');
-          map.setPaintProperty(id, 'text-halo-color', '#F7F5F0');
-          map.setPaintProperty(id, 'text-halo-width', 1.2);
-          try { map.setPaintProperty(id, 'icon-opacity', 0.35); } catch(e) {}
-        } else {
-          map.setPaintProperty(id, 'text-color', '#A8A098');
-          try { map.setPaintProperty(id, 'text-halo-color', '#F7F5F0'); } catch(e) {}
-          try { map.setPaintProperty(id, 'text-halo-width', 1.5); } catch(e) {}
-        }
-      }
-
-      // Admin boundaries — barely visible
-      if (id.includes('admin') || id.includes('boundary')) {
-        if (type === 'line') {
-          map.setPaintProperty(id, 'line-color', '#D8D2C8');
-          map.setPaintProperty(id, 'line-opacity', 0.15);
-        }
-      }
-
-    } catch(e) {}
   });
 });
 
