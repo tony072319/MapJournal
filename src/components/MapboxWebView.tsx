@@ -189,12 +189,53 @@ var userLat = ${location.latitude};
 var userLng = ${location.longitude};
 var markerElements = [];
 
-// Custom cartoon illustrated style from Mapbox Studio
+// Stamen Watercolor base layer via Stadia Maps — real watercolor-painted map tiles
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
   zoom: 15.5,
-  style: 'mapbox://styles/tonybyao/cmnv21tb3001d01sr9mgkbvc0',
+  style: {
+    version: 8,
+    glyphs: 'mapbox://fonts/mapbox/{fontstack}/{range}.pbf',
+    sources: {
+      'stamen-watercolor': {
+        type: 'raster',
+        tiles: [
+          'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg'
+        ],
+        tileSize: 256,
+        maxzoom: 18,
+        attribution: '© Stadia Maps, © Stamen Design, © OpenStreetMap'
+      },
+      'stamen-labels': {
+        type: 'raster',
+        tiles: [
+          'https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}.png'
+        ],
+        tileSize: 256,
+        maxzoom: 20
+      }
+    },
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: { 'background-color': '#F5EDD5' }
+      },
+      {
+        id: 'watercolor-layer',
+        type: 'raster',
+        source: 'stamen-watercolor',
+        paint: { 'raster-opacity': 1, 'raster-fade-duration': 300 }
+      },
+      {
+        id: 'labels-layer',
+        type: 'raster',
+        source: 'stamen-labels',
+        paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 300 }
+      }
+    ]
+  },
   attributionControl: false,
   pitch: 0,
   bearing: 0
