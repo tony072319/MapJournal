@@ -156,17 +156,25 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
   font-size: 8px; color: rgba(0,0,0,0.12);
   font-family: -apple-system, sans-serif; z-index: 20;
 }
-.mapboxgl-marker { z-index: 15 !important; }
 
 /* Decorative illustrations scattered on map */
 .decor-marker {
   pointer-events: none;
-  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.12));
+  filter: drop-shadow(1.5px 2.5px 2px rgba(50,30,10,0.2));
+  will-change: transform;
 }
-.decor-marker svg { display: block; }
+.decor-marker svg { display: block; overflow: visible; }
 .decor-cloud {
-  filter: drop-shadow(1px 2px 4px rgba(100,120,140,0.15));
+  filter: drop-shadow(1px 3px 5px rgba(100,120,140,0.2));
+  opacity: 0.92;
+}
+.decor-birds {
+  filter: none;
   opacity: 0.85;
+}
+.decor-mountain {
+  filter: drop-shadow(2px 3px 3px rgba(40,50,70,0.25));
+  opacity: 0.9;
 }
 </style>
 </head>
@@ -247,21 +255,67 @@ map.on('load', function() {
   document.querySelectorAll('.mapboxgl-ctrl-logo').forEach(function(el) {
     el.style.display = 'none';
   });
+  // Order matters: decorations first (below), then markers (above)
   scatterDecorations();
+  addUserMarker();
+  if (window.pendingMarkers) {
+    updateMarkers(window.pendingMarkers);
+    window.pendingMarkers = null;
+  }
 });
 
-// ---------- Hand-drawn SVG decorations ----------
+// ---------- Hand-drawn SVG decorations (17 types) ----------
 var DECOR_SVGS = {
-  pineTree: '<svg width="32" height="42" viewBox="0 0 32 42"><path d="M16 3 L6 22 L11 22 L4 32 L14 32 L14 38 L18 38 L18 32 L28 32 L21 22 L26 22 Z" fill="#7EB854" stroke="#2D5016" stroke-width="1.8" stroke-linejoin="round"/><rect x="14" y="36" width="4" height="5" fill="#5D3A1A"/></svg>',
-  roundTree: '<svg width="30" height="38" viewBox="0 0 30 38"><circle cx="15" cy="15" r="12" fill="#8FC564" stroke="#2D5016" stroke-width="1.8"/><circle cx="10" cy="12" r="3" fill="#A8D97D" opacity="0.6"/><rect x="13" y="26" width="4" height="8" fill="#5D3A1A"/></svg>',
-  autumnTree: '<svg width="28" height="36" viewBox="0 0 28 36"><ellipse cx="14" cy="13" rx="11" ry="10" fill="#E89960" stroke="#8B4A1E" stroke-width="1.8"/><circle cx="10" cy="10" r="2.5" fill="#FFB87A" opacity="0.7"/><rect x="12" y="21" width="4" height="9" fill="#5D3A1A"/></svg>',
-  tealTree: '<svg width="32" height="40" viewBox="0 0 32 40"><ellipse cx="16" cy="14" rx="13" ry="11" fill="#5FAFB8" stroke="#1E4550" stroke-width="1.8"/><circle cx="11" cy="11" r="3" fill="#85C9D0" opacity="0.6"/><rect x="14" y="24" width="4" height="9" fill="#5D3A1A"/></svg>',
-  pagoda: '<svg width="44" height="52" viewBox="0 0 44 52"><polygon points="4,22 22,12 40,22" fill="#8B4513" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><polygon points="8,36 22,28 36,36" fill="#A0522D" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="10" y="36" width="24" height="12" fill="#D9553C" stroke="#2C1810" stroke-width="1.8"/><rect x="20" y="40" width="4" height="8" fill="#F4E4C1"/><line x1="22" y1="12" x2="22" y2="8" stroke="#2C1810" stroke-width="1.5"/><circle cx="22" cy="6" r="2" fill="#FFD700" stroke="#2C1810" stroke-width="1"/></svg>',
-  templeGate: '<svg width="48" height="44" viewBox="0 0 48 44"><rect x="6" y="22" width="6" height="18" fill="#8B4513" stroke="#2C1810" stroke-width="1.8"/><rect x="36" y="22" width="6" height="18" fill="#8B4513" stroke="#2C1810" stroke-width="1.8"/><polygon points="2,22 24,12 46,22" fill="#D9553C" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="2" y="20" width="44" height="4" fill="#8B4513" stroke="#2C1810" stroke-width="1.5"/></svg>',
-  flowerCluster: '<svg width="28" height="26" viewBox="0 0 28 26"><circle cx="8" cy="10" r="4" fill="#FF6B9D" stroke="#8B2244" stroke-width="1.2"/><circle cx="18" cy="8" r="4" fill="#FFB84D" stroke="#8B5A1A" stroke-width="1.2"/><circle cx="14" cy="17" r="4" fill="#FF6B9D" stroke="#8B2244" stroke-width="1.2"/><circle cx="8" cy="10" r="1.5" fill="#FFE4B5"/><circle cx="18" cy="8" r="1.5" fill="#FFE4B5"/><circle cx="14" cy="17" r="1.5" fill="#FFE4B5"/></svg>',
-  cloud: '<svg width="50" height="26" viewBox="0 0 50 26"><ellipse cx="12" cy="14" rx="10" ry="8" fill="#FFFFFF" stroke="#B8C5D0" stroke-width="1.5"/><ellipse cx="25" cy="11" rx="12" ry="9" fill="#FFFFFF" stroke="#B8C5D0" stroke-width="1.5"/><ellipse cx="38" cy="14" rx="9" ry="7" fill="#FFFFFF" stroke="#B8C5D0" stroke-width="1.5"/></svg>',
-  rock: '<svg width="26" height="22" viewBox="0 0 26 22"><path d="M2 18 Q4 10 10 8 Q18 6 22 12 Q24 18 20 20 Q10 22 2 18 Z" fill="#9B8B7A" stroke="#3E2E1E" stroke-width="1.5" stroke-linejoin="round"/><ellipse cx="10" cy="13" rx="2" ry="1" fill="#B8A890" opacity="0.6"/></svg>',
-  house: '<svg width="36" height="38" viewBox="0 0 36 38"><rect x="6" y="18" width="24" height="16" fill="#F4D4A8" stroke="#2C1810" stroke-width="1.8"/><polygon points="3,18 18,6 33,18" fill="#C23616" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="14" y="24" width="6" height="10" fill="#5D3A1A" stroke="#2C1810" stroke-width="1.2"/><rect x="22" y="22" width="5" height="5" fill="#85C9D0" stroke="#2C1810" stroke-width="1.2"/></svg>'
+  // Tall 3-tier pagoda with curved eaves (East Asian temple)
+  pagoda3: '<svg width="56" height="72" viewBox="0 0 56 72"><line x1="28" y1="8" x2="28" y2="3" stroke="#2C1810" stroke-width="1.8"/><circle cx="28" cy="3" r="2.5" fill="#D9A94A" stroke="#2C1810" stroke-width="1.5"/><path d="M12 18 Q28 8 44 18 Q46 19 43 21 L13 21 Q10 19 12 18 Z" fill="#8B3A2C" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="18" y="21" width="20" height="10" fill="#E8D4A8" stroke="#2C1810" stroke-width="1.5"/><rect x="22" y="24" width="5" height="7" fill="#8B3A2C"/><rect x="29" y="24" width="5" height="7" fill="#8B3A2C"/><path d="M8 34 Q28 24 48 34 Q50 35 47 37 L9 37 Q6 35 8 34 Z" fill="#A0453A" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="14" y="37" width="28" height="12" fill="#F4E4C1" stroke="#2C1810" stroke-width="1.5"/><rect x="18" y="40" width="6" height="9" fill="#8B3A2C"/><rect x="26" y="40" width="6" height="9" fill="#8B3A2C"/><rect x="34" y="40" width="4" height="9" fill="#8B3A2C"/><path d="M4 52 Q28 42 52 52 Q54 53 51 55 L5 55 Q2 53 4 52 Z" fill="#B8554A" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="10" y="55" width="36" height="14" fill="#D9553C" stroke="#2C1810" stroke-width="1.8"/><rect x="24" y="58" width="8" height="11" fill="#2C1810"/><rect x="14" y="58" width="6" height="6" fill="#F4E4C1" stroke="#2C1810" stroke-width="1"/><rect x="36" y="58" width="6" height="6" fill="#F4E4C1" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Red temple gate (torii style with tile roof)
+  gate: '<svg width="58" height="56" viewBox="0 0 58 56"><path d="M2 20 Q29 6 56 20 Q58 21 55 23 L3 23 Q0 21 2 20 Z" fill="#8B3A2C" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="4" y="23" width="50" height="4" fill="#D9A94A" stroke="#2C1810" stroke-width="1.5"/><rect x="8" y="27" width="6" height="22" fill="#8B4513" stroke="#2C1810" stroke-width="1.8"/><rect x="44" y="27" width="6" height="22" fill="#8B4513" stroke="#2C1810" stroke-width="1.8"/><rect x="18" y="30" width="22" height="19" fill="#F4E4C1" stroke="#2C1810" stroke-width="1.8"/><path d="M18 40 L40 40" stroke="#2C1810" stroke-width="1.2"/><circle cx="29" cy="36" r="2" fill="#D9553C" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Tall spindly pine (like reference 1/3)
+  pineTall: '<svg width="26" height="58" viewBox="0 0 26 58"><path d="M13 3 L6 20 L10 20 L4 32 L9 32 L3 44 L11 44 L11 50 L15 50 L15 44 L23 44 L17 32 L22 32 L16 20 L20 20 Z" fill="#5F9C52" stroke="#1F3D18" stroke-width="1.8" stroke-linejoin="round"/><rect x="11" y="48" width="4" height="7" fill="#5D3A1A" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Round oak/leafy tree
+  oakTree: '<svg width="38" height="48" viewBox="0 0 38 48"><circle cx="19" cy="18" r="15" fill="#7EB854" stroke="#1F3D18" stroke-width="1.8"/><circle cx="13" cy="13" r="5" fill="#9ECC70" opacity="0.7"/><circle cx="24" cy="16" r="3" fill="#9ECC70" opacity="0.7"/><rect x="17" y="32" width="4" height="12" fill="#5D3A1A" stroke="#2C1810" stroke-width="1"/><path d="M19 32 L19 36" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Bare branching winter tree (dark)
+  bareBranch: '<svg width="32" height="44" viewBox="0 0 32 44"><path d="M16 42 L16 18 M16 18 L8 8 M16 18 L24 10 M16 24 L6 20 M16 24 L26 18 M16 30 L10 28 M16 30 L22 26" stroke="#3A2818" stroke-width="2" stroke-linecap="round" fill="none"/><rect x="14" y="38" width="4" height="6" fill="#3A2818"/></svg>',
+
+  // Autumn round tree (orange/red)
+  autumnTree: '<svg width="32" height="40" viewBox="0 0 32 40"><circle cx="16" cy="15" r="13" fill="#D97040" stroke="#6B2E10" stroke-width="1.8"/><circle cx="10" cy="10" r="3" fill="#F4A060" opacity="0.7"/><circle cx="21" cy="18" r="2.5" fill="#B85520" opacity="0.7"/><rect x="14" y="27" width="4" height="9" fill="#5D3A1A" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Teal mushroom-shaped tree
+  tealDome: '<svg width="36" height="42" viewBox="0 0 36 42"><path d="M6 20 Q6 6 18 4 Q30 6 30 20 Q30 24 26 24 L10 24 Q6 24 6 20 Z" fill="#4A9AA8" stroke="#1A454F" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="13" r="3" fill="#6CBCC8" opacity="0.6"/><rect x="16" y="24" width="4" height="12" fill="#5D3A1A" stroke="#2C1810" stroke-width="1"/></svg>',
+
+  // Tall pine tree (narrow)
+  pineNarrow: '<svg width="22" height="54" viewBox="0 0 22 54"><path d="M11 3 L5 18 L8 18 L3 30 L7 30 L2 42 L9 42 L9 48 L13 48 L13 42 L20 42 L15 30 L19 30 L14 18 L17 18 Z" fill="#4A7C3E" stroke="#1F3D18" stroke-width="1.8" stroke-linejoin="round"/><rect x="9" y="46" width="4" height="6" fill="#5D3A1A"/></svg>',
+
+  // Wispy cloud
+  cloud: '<svg width="64" height="32" viewBox="0 0 64 32"><ellipse cx="14" cy="18" rx="12" ry="9" fill="#FFFFFF" stroke="#7A8E9E" stroke-width="1.8"/><ellipse cx="32" cy="14" rx="16" ry="11" fill="#FFFFFF" stroke="#7A8E9E" stroke-width="1.8"/><ellipse cx="50" cy="18" rx="12" ry="9" fill="#FFFFFF" stroke="#7A8E9E" stroke-width="1.8"/></svg>',
+
+  // Flying birds (V shapes)
+  birds: '<svg width="40" height="16" viewBox="0 0 40 16"><path d="M2 8 Q6 3 10 8 Q14 3 18 8" stroke="#3A2818" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M22 5 Q26 1 30 5" stroke="#3A2818" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M32 10 Q36 6 40 10" stroke="#3A2818" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>',
+
+  // Flower cluster
+  flowers: '<svg width="32" height="28" viewBox="0 0 32 28"><circle cx="9" cy="11" r="4.5" fill="#FF6B9D" stroke="#6B1F3F" stroke-width="1.4"/><circle cx="20" cy="8" r="4.5" fill="#FFB84D" stroke="#6B4A1A" stroke-width="1.4"/><circle cx="16" cy="19" r="4.5" fill="#E64F80" stroke="#6B1F3F" stroke-width="1.4"/><circle cx="9" cy="11" r="1.8" fill="#FFE4B5"/><circle cx="20" cy="8" r="1.8" fill="#FFE4B5"/><circle cx="16" cy="19" r="1.8" fill="#FFE4B5"/></svg>',
+
+  // Stone rock
+  rock: '<svg width="30" height="24" viewBox="0 0 30 24"><path d="M2 20 Q3 10 11 7 Q21 5 26 13 Q28 19 24 22 Q12 24 2 20 Z" fill="#9B8B7A" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 14 L12 12 L15 14" stroke="#5D4030" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>',
+
+  // Stone lantern (Japanese)
+  lantern: '<svg width="24" height="42" viewBox="0 0 24 42"><rect x="8" y="34" width="8" height="5" fill="#9B8B7A" stroke="#2C1810" stroke-width="1.5"/><rect x="6" y="30" width="12" height="5" fill="#A89880" stroke="#2C1810" stroke-width="1.5"/><rect x="7" y="18" width="10" height="13" fill="#D4C5A8" stroke="#2C1810" stroke-width="1.5"/><circle cx="12" cy="25" r="2.5" fill="#FFD76B"/><path d="M4 17 L20 17 L16 14 L8 14 Z" fill="#9B8B7A" stroke="#2C1810" stroke-width="1.5" stroke-linejoin="round"/><rect x="10" y="10" width="4" height="4" fill="#9B8B7A" stroke="#2C1810" stroke-width="1.2"/></svg>',
+
+  // Mountain with snow cap
+  mountain: '<svg width="56" height="42" viewBox="0 0 56 42"><path d="M4 38 L20 12 L28 22 L38 8 L52 38 Z" fill="#8FA4B0" stroke="#2C3E50" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 18 L20 12 L24 18 L20 16 Z" fill="#FFFFFF"/><path d="M34 14 L38 8 L42 14 L38 12 Z" fill="#FFFFFF"/></svg>',
+
+  // Bamboo cluster
+  bamboo: '<svg width="28" height="54" viewBox="0 0 28 54"><path d="M8 50 L8 6" stroke="#7AA050" stroke-width="3.5" stroke-linecap="round"/><path d="M14 50 L14 10" stroke="#5F8A38" stroke-width="3.5" stroke-linecap="round"/><path d="M20 50 L20 8" stroke="#7AA050" stroke-width="3.5" stroke-linecap="round"/><path d="M5 12 L11 12 M11 22 L17 22 M17 14 L23 14 M5 32 L11 32 M11 38 L17 38 M17 28 L23 28" stroke="#3D5A1C" stroke-width="1.2" stroke-linecap="round"/><ellipse cx="4" cy="8" rx="4" ry="2" fill="#7AA050" stroke="#3D5A1C" stroke-width="1"/><ellipse cx="24" cy="10" rx="4" ry="2" fill="#7AA050" stroke="#3D5A1C" stroke-width="1"/></svg>',
+
+  // Traditional tile-roof house
+  house: '<svg width="40" height="42" viewBox="0 0 40 42"><path d="M2 20 L20 6 L38 20 Q39 21 37 23 L3 23 Q1 21 2 20 Z" fill="#5D3A1A" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><rect x="6" y="23" width="28" height="16" fill="#F4D4A8" stroke="#2C1810" stroke-width="1.8"/><rect x="15" y="28" width="8" height="12" fill="#5D3A1A" stroke="#2C1810" stroke-width="1.5"/><rect x="25" y="27" width="6" height="6" fill="#85C9D0" stroke="#2C1810" stroke-width="1.2"/><path d="M25 30 L31 30 M28 27 L28 33" stroke="#2C1810" stroke-width="0.8"/></svg>',
+
+  // Sailboat
+  boat: '<svg width="42" height="38" viewBox="0 0 42 38"><path d="M4 28 L38 28 L34 34 L8 34 Z" fill="#8B4513" stroke="#2C1810" stroke-width="1.8" stroke-linejoin="round"/><line x1="21" y1="28" x2="21" y2="6" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/><path d="M21 8 Q32 14 30 24 L21 24 Z" fill="#F4E4C1" stroke="#2C1810" stroke-width="1.5" stroke-linejoin="round"/><path d="M21 10 Q14 18 15 26 L21 26 Z" fill="#D9553C" stroke="#2C1810" stroke-width="1.5" stroke-linejoin="round"/></svg>'
 };
 
 var decorMarkers = [];
@@ -272,50 +326,106 @@ function scatterDecorations() {
   decorMarkers = [];
 
   // Seeded random so decorations stay in same place across re-renders
-  var seed = Math.floor(userLat * 1000) + Math.floor(userLng * 1000);
+  var seed = Math.floor(userLat * 10000) + Math.floor(userLng * 10000);
   function rand() {
     seed = (seed * 9301 + 49297) % 233280;
     return seed / 233280;
   }
 
-  var types = ['pineTree','pineTree','roundTree','roundTree','autumnTree','tealTree','tealTree','flowerCluster','rock','pineTree','roundTree','pagoda','templeGate','house','cloud'];
+  // Weighted type distribution — lots of trees, fewer buildings, occasional special
+  var typePool = [
+    'pineTall','pineTall','pineTall','pineNarrow','pineNarrow',
+    'oakTree','oakTree','oakTree','oakTree',
+    'bareBranch','bareBranch',
+    'autumnTree','autumnTree',
+    'tealDome','tealDome','tealDome',
+    'bamboo','bamboo',
+    'flowers','flowers','flowers',
+    'rock','rock',
+    'lantern',
+    'pagoda3','pagoda3',
+    'gate','gate',
+    'house','house','house',
+    'cloud','cloud','cloud',
+    'birds','birds','birds',
+    'mountain',
+    'boat'
+  ];
 
-  // Generate 50 decorations in a spiral pattern around user, avoiding center
-  var count = 60;
-  for (var i = 0; i < count; i++) {
-    var angle = rand() * Math.PI * 2;
-    var minDist = 0.003; // ~300m — leave space around user
-    var maxDist = 0.025; // ~2.5km
-    var dist = minDist + rand() * (maxDist - minDist);
-    var lat = userLat + Math.sin(angle) * dist;
-    var lng = userLng + Math.cos(angle) * dist * 1.3; // compensate for longitude compression
+  // Grid-based distribution — 11x11 cells around user, each cell gets 1-2 decorations
+  // Total: roughly 130-180 decorations spread evenly
+  var gridSize = 11;
+  var cellStep = 0.0035; // ~350m per cell
+  var startLat = userLat - (gridSize * cellStep) / 2;
+  var startLng = userLng - (gridSize * cellStep * 1.3) / 2;
 
-    var type = types[Math.floor(rand() * types.length)];
-    var svg = DECOR_SVGS[type];
+  for (var gx = 0; gx < gridSize; gx++) {
+    for (var gy = 0; gy < gridSize; gy++) {
+      var cellCenterLat = startLat + gy * cellStep;
+      var cellCenterLng = startLng + gx * cellStep * 1.3;
 
-    var el = document.createElement('div');
-    el.className = 'decor-marker decor-' + type;
-    el.innerHTML = svg;
-    var scale = 0.8 + rand() * 0.6;
-    var rotate = (rand() - 0.5) * 12;
-    el.style.transform = 'scale(' + scale + ') rotate(' + rotate + 'deg)';
-    el.style.pointerEvents = 'none';
-    el.style.transformOrigin = 'center bottom';
+      // Distance from user in cell units
+      var dcx = gx - gridSize / 2;
+      var dcy = gy - gridSize / 2;
+      var cellDist = Math.sqrt(dcx * dcx + dcy * dcy);
 
-    var marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-      .setLngLat([lng, lat])
-      .addTo(map);
-    decorMarkers.push(marker);
+      // Skip cells too close to user (keep clear zone for marker)
+      if (cellDist < 1.2) continue;
+
+      // Number of decorations per cell (1-2, less at edges)
+      var decorPerCell = cellDist > 4.5 ? 1 : (rand() > 0.3 ? 2 : 1);
+
+      for (var n = 0; n < decorPerCell; n++) {
+        // Jitter within cell
+        var jitLat = (rand() - 0.5) * cellStep * 0.85;
+        var jitLng = (rand() - 0.5) * cellStep * 0.85 * 1.3;
+        var lat = cellCenterLat + jitLat;
+        var lng = cellCenterLng + jitLng;
+
+        // Special types more likely at certain positions
+        var type;
+        var r = rand();
+        if (cellDist > 3.5 && r < 0.08) {
+          type = 'cloud';
+        } else if (cellDist > 3 && r < 0.06) {
+          type = 'birds';
+        } else if (cellDist > 4 && r < 0.04) {
+          type = 'mountain';
+        } else {
+          type = typePool[Math.floor(rand() * typePool.length)];
+        }
+
+        var svg = DECOR_SVGS[type];
+        if (!svg) continue;
+
+        var el = document.createElement('div');
+        el.className = 'decor-marker decor-' + type;
+        el.innerHTML = svg;
+        var scale = 0.75 + rand() * 0.55;
+        var rotate = (rand() - 0.5) * 10;
+        el.style.transform = 'scale(' + scale + ') rotate(' + rotate + 'deg)';
+        el.style.pointerEvents = 'none';
+        el.style.transformOrigin = 'center bottom';
+
+        var marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        decorMarkers.push(marker);
+      }
+    }
   }
 }
 
-// User location marker with pulse animation
-var userWrapper = document.createElement('div');
-userWrapper.className = 'user-dot-wrapper';
-userWrapper.innerHTML = '<div class="user-dot-pulse"></div><div class="user-dot"></div>';
-var userMarker = new mapboxgl.Marker({ element: userWrapper })
-  .setLngLat([userLng, userLat])
-  .addTo(map);
+// User location marker — created after decorations for correct z-order
+var userMarker = null;
+function addUserMarker() {
+  var userWrapper = document.createElement('div');
+  userWrapper.className = 'user-dot-wrapper';
+  userWrapper.innerHTML = '<div class="user-dot-pulse"></div><div class="user-dot"></div>';
+  userMarker = new mapboxgl.Marker({ element: userWrapper })
+    .setLngLat([userLng, userLat])
+    .addTo(map);
+}
 
 function createMarkerEl(m) {
   var container = document.createElement('div');
@@ -343,6 +453,10 @@ function createMarkerEl(m) {
 }
 
 function updateMarkers(newMarkers) {
+  if (!map.isStyleLoaded()) {
+    window.pendingMarkers = newMarkers;
+    return;
+  }
   markerElements.forEach(function(m) { m.remove(); });
   markerElements = [];
   newMarkers.forEach(function(m) {
@@ -357,8 +471,7 @@ function updateMarkers(newMarkers) {
 function updateUserLocation(lat, lng) {
   userLat = lat;
   userLng = lng;
-  userMarker.setLngLat([lng, lat]);
-  if (map.isStyleLoaded()) scatterDecorations();
+  if (userMarker) userMarker.setLngLat([lng, lat]);
 }
 
 function zoomIn() { map.zoomTo(map.getZoom() + 1, { duration: 300 }); }
