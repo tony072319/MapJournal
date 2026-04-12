@@ -183,7 +183,7 @@ var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
   zoom: 15.5,
-  style: 'mapbox://styles/tonybyao/cmnv1iel9005101sv4xf2bao2',
+  style: 'mapbox://styles/tonybyao/cmnv21tb3001d01sr9mgkbvc0',
   attributionControl: false,
   pitch: 0,
   bearing: 0
