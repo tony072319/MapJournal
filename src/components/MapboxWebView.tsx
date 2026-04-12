@@ -190,6 +190,7 @@ var userLng = ${location.longitude};
 var markerElements = [];
 
 // Stamen Watercolor base layer via Stadia Maps — real watercolor-painted map tiles
+var STADIA_KEY = '4a424ba4-2339-4ea3-8659-c06f29b42691';
 var map = new mapboxgl.Map({
   container: 'map',
   center: [userLng, userLat],
@@ -201,7 +202,7 @@ var map = new mapboxgl.Map({
       'stamen-watercolor': {
         type: 'raster',
         tiles: [
-          'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg'
+          'https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg?api_key=' + STADIA_KEY
         ],
         tileSize: 256,
         maxzoom: 18,
@@ -210,7 +211,7 @@ var map = new mapboxgl.Map({
       'stamen-labels': {
         type: 'raster',
         tiles: [
-          'https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}.png'
+          'https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}.png?api_key=' + STADIA_KEY
         ],
         tileSize: 256,
         maxzoom: 20
