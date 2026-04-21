@@ -1,121 +1,77 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MOOD_OPTIONS } from '../constants/moods';
-import { Colors } from '../constants/colors';
+import { Colors, MoodColors } from '../constants/colors';
 import { MoodType } from '../types';
 
 interface Props {
   selected: MoodType | null;
   onSelect: (mood: MoodType, emoji: string) => void;
+  compact?: boolean;
 }
 
-export const MoodPicker: React.FC<Props> = ({ selected, onSelect }) => {
+/**
+ * MoodPicker — grid of 8 moods. Selected one gets its color as background
+ * and a scale bump. Compact mode shrinks for inline contexts.
+ */
+export const MoodPicker: React.FC<Props> = ({ selected, onSelect, compact }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>你现在感觉怎么样？</Text>
-      {/* 第一行: 4个 */}
       <View style={styles.row}>
-        {MOOD_OPTIONS.slice(0, 4).map((mood) => {
-          const isSelected = selected === mood.type;
+        {MOOD_OPTIONS.map((m) => {
+          const sel = selected === m.type;
           return (
             <TouchableOpacity
-              key={mood.type}
+              key={m.type}
+              onPress={() => onSelect(m.type, m.emoji)}
+              activeOpacity={0.75}
               style={[
-                styles.option,
-                isSelected ? {
-                  backgroundColor: mood.color + '15',
-                  borderColor: mood.color,
-                } : undefined,
+                styles.cell,
+                compact && styles.cellCompact,
+                sel && {
+                  backgroundColor: MoodColors[m.type],
+                  transform: [{ scale: 1.06 }],
+                },
               ]}
-              onPress={() => onSelect(mood.type, mood.emoji)}
-              activeOpacity={0.6}
             >
-              <Text style={[styles.emoji, isSelected ? styles.emojiSelected : undefined]}>
-                {mood.emoji}
+              <Text style={[styles.emoji, { fontSize: sel ? (compact ? 22 : 28) : (compact ? 18 : 22) }]}>
+                {m.emoji}
               </Text>
-              <Text
-                style={[
-                  styles.label,
-                  isSelected ? { color: mood.color, fontWeight: '700' } : undefined,
-                ]}
-              >
-                {mood.label}
-              </Text>
+              {sel && !compact && (
+                <Text style={styles.label}>{m.label}</Text>
+              )}
             </TouchableOpacity>
           );
         })}
       </View>
-      {/* 第二行: 4个 */}
-      <View style={styles.row}>
-        {MOOD_OPTIONS.slice(4).map((mood) => {
-          const isSelected = selected === mood.type;
-          return (
-            <TouchableOpacity
-              key={mood.type}
-              style={[
-                styles.option,
-                isSelected ? {
-                  backgroundColor: mood.color + '15',
-                  borderColor: mood.color,
-                } : undefined,
-              ]}
-              onPress={() => onSelect(mood.type, mood.emoji)}
-              activeOpacity={0.6}
-            >
-              <Text style={[styles.emoji, isSelected ? styles.emojiSelected : undefined]}>
-                {mood.emoji}
-              </Text>
-              <Text
-                style={[
-                  styles.label,
-                  isSelected ? { color: mood.color, fontWeight: '700' } : undefined,
-                ]}
-              >
-                {mood.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {!compact && (
+        <View style={styles.scaleRow}>
+          <Text style={styles.scaleLabel}>BEST · 超棒</Text>
+          <Text style={styles.scaleLabel}>WORST · 最差</Text>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 24,
+  container: { width: '100%' },
+  row: { flexDirection: 'row', gap: 3 },
+  cell: {
+    flex: 1, aspectRatio: 1, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center', gap: 2,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  option: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginHorizontal: 3,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  emoji: {
-    fontSize: 26,
-  },
-  emojiSelected: {
-    fontSize: 30,
-  },
+  cellCompact: { aspectRatio: 1, borderRadius: 10 },
+  emoji: { textAlign: 'center' },
   label: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    fontWeight: '500',
+    color: '#FFFFFF', fontSize: 9, fontWeight: '700', letterSpacing: 0.3,
+  },
+  scaleRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginTop: 8, paddingHorizontal: 4,
+  },
+  scaleLabel: {
+    fontFamily: 'Menlo', fontSize: 9,
+    color: Colors.muted, letterSpacing: 1.5,
   },
 });

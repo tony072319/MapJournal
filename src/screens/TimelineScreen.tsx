@@ -1,23 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View,
-  SectionList,
-  StyleSheet,
-  Text,
-  Image,
-  TextInput,
-  TouchableOpacity,
-  RefreshControl,
+  View, SectionList, StyleSheet, Text, Image,
+  TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useEntries } from '../context/EntriesContext';
 import { EntryDetail } from '../components/EntryDetail';
-import { TimelineFilters } from '../components/TimelineFilters';
 import { Colors, MoodColors } from '../constants/colors';
-import { useAppColors } from '../hooks/useAppColors';
-import { getMoodByType } from '../constants/moods';
-import { ACTIVITY_OPTIONS } from '../constants/activities';
-import { DailyPrompt } from '../components/DailyPrompt';
-import { formatRelative, formatShortDate } from '../utils/dateFormat';
+import { getMoodByType, MOOD_OPTIONS } from '../constants/moods';
+import { formatRelative } from '../utils/dateFormat';
 import { Entry, MoodType } from '../types';
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
@@ -26,409 +16,242 @@ import isYesterday from 'dayjs/plugin/isYesterday';
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 
-const formatSectionTitle = (dateStr: string): string => {
-  const date = dayjs(dateStr);
-  if (date.isToday()) return '今天';
-  if (date.isYesterday()) return '昨天';
-  if (date.isAfter(dayjs().subtract(7, 'day'))) return date.format('dddd');
-  if (date.year() === dayjs().year()) return date.format('M月D日');
-  return date.format('YYYY年M月D日');
+const formatSectionTitle = (d: string) => {
+  const x = dayjs(d);
+  if (x.isToday()) return ['Today', '今天'];
+  if (x.isYesterday()) return ['Yesterday', '昨天'];
+  if (x.isAfter(dayjs().subtract(7, 'day'))) return [x.format('dddd'), x.format('dddd')];
+  return [x.format('MMM D'), x.format('M月D日')];
 };
 
-interface Section {
-  title: string;
-  data: Entry[];
-  count: number;
-}
+interface Section { title: [string, string]; data: Entry[]; }
 
-// 内联的时间线卡片 — 更紧凑的设计
-const TimelineItem = ({ entry, onPress }: { entry: Entry; onPress: () => void }) => {
-  const mood = getMoodByType(entry.mood);
-  const moodColor = MoodColors[entry.mood as MoodType] || Colors.primary;
+const MoodRibbon: React.FC<{ entries: Entry[] }> = ({ entries }) => {
+  const last14 = useMemo(() => {
+    const now = dayjs();
+    const days = Array.from({ length: 14 }, (_, i) => now.subtract(13 - i, 'day'));
+    return days.map((d) => {
+      const dayEntries = entries.filter((e) => dayjs(e.createdAt).isSame(d, 'day'));
+      if (dayEntries.length === 0) return { count: 0, mood: null as MoodType | null };
+      const moodIdx = Math.min(...dayEntries.map((e) => MOOD_OPTIONS.findIndex((m) => m.type === e.mood)));
+      return { count: dayEntries.length, mood: MOOD_OPTIONS[moodIdx]?.type as MoodType };
+    });
+  }, [entries]);
 
   return (
-    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
-      {/* 左侧时间线 */}
-      <View style={styles.itemTimeline}>
-        <View style={[styles.itemDot, { backgroundColor: moodColor }]} />
-        <View style={styles.itemLine} />
+    <View style={styles.ribbon}>
+      <View style={styles.ribbonHead}>
+        <Text style={styles.ribbonLabel}>LAST 14 DAYS · 近两周</Text>
       </View>
+      <View style={styles.ribbonBars}>
+        {last14.map((d, i) => (
+          <View
+            key={i}
+            style={[
+              styles.ribbonBar,
+              {
+                height: Math.max(4, d.count * 8),
+                backgroundColor: d.mood ? MoodColors[d.mood] : Colors.border,
+                opacity: d.count ? 1 : 0.4,
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
 
-      {/* 右侧内容卡片 */}
-      <View style={styles.itemCard}>
-        <View style={styles.itemHeader}>
-          <View style={styles.itemHeaderLeft}>
-            <Text style={styles.itemEmoji}>{entry.emoji}</Text>
-            <Text style={[styles.itemMood, { color: moodColor }]}>{mood.label}</Text>
+const JournalCard = ({ entry, onPress, isLast }: { entry: Entry; onPress: () => void; isLast: boolean }) => {
+  const mood = getMoodByType(entry.mood);
+  const c = MoodColors[entry.mood as MoodType] || Colors.primary;
+  return (
+    <TouchableOpacity style={styles.cardRow} onPress={onPress} activeOpacity={0.8}>
+      {/* Left rail */}
+      <View style={styles.rail}>
+        <Text style={styles.railTime}>{dayjs(entry.createdAt).format('H:mm')}</Text>
+        <View style={[styles.railDot, { backgroundColor: c }]} />
+        {!isLast && <View style={styles.railLine} />}
+      </View>
+      {/* Card body */}
+      <View style={styles.card}>
+        <View style={styles.cardHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.moodTag, { color: c }]}>
+              {mood.label.toUpperCase()} · {mood.emoji}
+            </Text>
+            {entry.address ? <Text style={styles.place}>📍 {entry.address}</Text> : null}
           </View>
-          <Text style={styles.itemTime}>{formatRelative(entry.createdAt)}</Text>
+          <Text style={styles.rel}>{formatRelative(entry.createdAt)}</Text>
         </View>
-
-        {/* 活动标签 */}
-        {entry.activities ? (
-          <View style={styles.itemActivities}>
-            {(JSON.parse(entry.activities) as string[]).slice(0, 4).map((a) => {
-              const act = ACTIVITY_OPTIONS.find((o) => o.id === a);
-              return <Text key={a} style={styles.itemActivityTag}>{act ? `${act.icon} ${act.label}` : a}</Text>;
-            })}
-          </View>
-        ) : null}
-
         {entry.note ? (
-          <Text style={styles.itemNote} numberOfLines={3}>{entry.note}</Text>
+          <Text style={styles.serifNote} numberOfLines={4}>「{entry.note}」</Text>
         ) : null}
-
-        {entry.photoUri ? (
-          <Image source={{ uri: entry.photoUri }} style={styles.itemPhoto} />
-        ) : null}
-
-        {entry.address ? (
-          <View style={styles.itemLocationRow}>
-            <Text style={styles.itemLocationPin}>📍</Text>
-            <Text style={styles.itemAddress} numberOfLines={1}>{entry.address}</Text>
-          </View>
-        ) : null}
+        {entry.photoUri ? <Image source={{ uri: entry.photoUri }} style={styles.photo} /> : null}
       </View>
     </TouchableOpacity>
   );
 };
 
 export const TimelineScreen: React.FC = () => {
-  const { entries, refreshEntries } = useEntries();
-  const colors = useAppColors();
-  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const { entries, refreshEntries: refresh } = useEntries();
+  const [selected, setSelected] = useState<Entry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [moodFilters, setMoodFilters] = useState<MoodType[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [period, setPeriod] = useState<'all' | 'week' | 'month'>('all');
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
-  const handleToggleMoodFilter = (mood: MoodType) => {
-    setMoodFilters((prev) =>
-      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
-    );
-  };
-
-  const sections: Section[] = useMemo(() => {
-    let filtered = entries;
-
-    // 时段筛选
-    if (period !== 'all') {
-      const now = dayjs();
-      const start = period === 'week' ? now.subtract(7, 'day') : now.subtract(30, 'day');
-      filtered = filtered.filter((e) => dayjs(e.createdAt).isAfter(start));
-    }
-
-    // 城市筛选
-    if (selectedCity) {
-      filtered = filtered.filter((e) => e.address && e.address.includes(selectedCity));
-    }
-
-    // 心情筛选
-    if (moodFilters.length > 0) {
-      filtered = filtered.filter((e) => moodFilters.includes(e.mood as MoodType));
-    }
-
-    // 文本搜索
-    if (searchText.trim()) {
-      const q = searchText.toLowerCase();
-      filtered = filtered.filter((e) =>
-        (e.note && e.note.toLowerCase().includes(q)) ||
-        (e.address && e.address.toLowerCase().includes(q)) ||
-        (e.activities && e.activities.toLowerCase().includes(q))
-      );
-    }
-
-    const sorted = [...filtered].sort(
+  const sections = useMemo<Section[]>(() => {
+    const sorted = [...entries].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-
     const groups: Record<string, Entry[]> = {};
-    sorted.forEach((entry) => {
-      const dateKey = dayjs(entry.createdAt).format('YYYY-MM-DD');
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(entry);
+    sorted.forEach((e) => {
+      const key = dayjs(e.createdAt).format('YYYY-MM-DD');
+      (groups[key] = groups[key] || []).push(e);
     });
-
-    return Object.entries(groups).map(([dateKey, data]) => ({
-      title: formatSectionTitle(dateKey),
+    return Object.entries(groups).map(([k, data]) => ({
+      title: formatSectionTitle(k) as [string, string],
       data,
-      count: data.length,
     }));
-  }, [entries, moodFilters, searchText, period, selectedCity]);
+  }, [entries]);
 
-  const handleRefresh = async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    await refreshEntries();
-    setRefreshing(false);
+    try { await refresh(); } finally { setRefreshing(false); }
   };
 
-  if (entries.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
-        {/* 时间线视觉隐喻 */}
-        <View style={styles.emptyTimeline}>
-          <View style={styles.emptyTimelineLine} />
-          {[0.3, 0.5, 0.7].map((opacity, i) => (
-            <View key={i} style={[styles.emptyTimelineDot, { opacity }]} />
-          ))}
-        </View>
-        <Text style={styles.emptyTitle}>你的心情故事</Text>
-        <Text style={styles.emptyHint}>
-          {'每个时刻都是故事的一部分\n去首页记录你的第一条心情'}
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <View>
-            <DailyPrompt
-              hasRecordedToday={entries.some((e) =>
-                dayjs(e.createdAt).isSame(dayjs(), 'day')
-              )}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="搜索心情、地点、活动..."
-              placeholderTextColor={Colors.textSecondary}
-              value={searchText}
-              onChangeText={setSearchText}
-              clearButtonMode="while-editing"
-            />
-            <TimelineFilters
-              entries={entries}
-              period={period}
-              onPeriodChange={setPeriod}
-              selectedCity={selectedCity}
-              onCityChange={setSelectedCity}
-              moodFilters={moodFilters}
-              onMoodToggle={handleToggleMoodFilter}
-              onMoodClear={() => setMoodFilters([])}
-            />
-          </View>
-        }
-        renderItem={({ item }) => (
-          <TimelineItem entry={item} onPress={() => setSelectedEntry(item)} />
-        )}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionDot} />
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionLine} />
-            <Text style={styles.sectionCount}>{section.count}</Text>
-          </View>
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
+        keyExtractor={(e) => e.id}
         stickySectionHeadersEnabled={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.hKicker}>MAPJOURNAL · 日志</Text>
+            <Text style={styles.hTitle}>
+              <Text style={styles.hTitleItalic}>Your</Text> story.
+            </Text>
+            <MoodRibbon entries={entries} />
+          </View>
+        }
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionTitle}>{section.title[1]}</Text>
+            <View style={styles.sectionRule} />
+            <Text style={styles.sectionCount}>
+              {String(section.data.length).padStart(2, '0')}
+            </Text>
+          </View>
+        )}
+        renderItem={({ item, index, section }) => (
+          <JournalCard
+            entry={item}
+            onPress={() => setSelected(item)}
+            isLast={index === section.data.length - 1}
           />
+        )}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        contentContainerStyle={{ paddingBottom: 140 }}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>还没有记录</Text>
+            <Text style={styles.emptyHint}>在地图上放下第一枚心情别针。</Text>
+          </View>
         }
       />
-      <EntryDetail
-        entry={selectedEntry}
-        onClose={() => setSelectedEntry(null)}
-      />
+      <EntryDetail entry={selected} onClose={() => setSelected(null)} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: { paddingHorizontal: 20, paddingTop: 58, paddingBottom: 12 },
+  hKicker: {
+    fontFamily: 'Menlo', fontSize: 10, color: Colors.textSecondary,
+    letterSpacing: 2.5, marginBottom: 6,
   },
-  list: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
+  hTitle: {
+    fontFamily: 'Georgia', fontSize: 38, color: Colors.text,
+    letterSpacing: -1, lineHeight: 40, marginBottom: 16,
   },
-  searchInput: {
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.text,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  hTitleItalic: { fontStyle: 'italic' },
+
+  ribbon: {
+    padding: 12, backgroundColor: Colors.card, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.border, marginTop: 8,
   },
-  // 时间线条目
-  item: {
-    flexDirection: 'row',
-    marginBottom: 4,
+  ribbonHead: {
+    flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8,
   },
-  itemTimeline: {
-    width: 24,
-    alignItems: 'center',
-    marginRight: 12,
+  ribbonLabel: {
+    fontFamily: 'Menlo', fontSize: 10, color: Colors.textSecondary,
+    letterSpacing: 1.5,
   },
-  itemDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 16,
+  ribbonBars: {
+    flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 40,
   },
-  itemLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: Colors.border,
-    marginTop: 4,
-  },
-  itemCard: {
-    flex: 1,
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-    shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  itemHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  itemEmoji: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  itemMood: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  itemTime: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  itemActivities: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 4,
-  },
-  itemActivityTag: {
-    fontSize: 11,
-    color: Colors.primary,
-    backgroundColor: Colors.primary + '10',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 4,
-    marginBottom: 2,
-    fontWeight: '500',
-    overflow: 'hidden',
-  },
-  itemNote: {
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 21,
-    marginBottom: 6,
-  },
-  itemPhoto: {
-    width: '100%',
-    height: 140,
-    borderRadius: 10,
-    marginBottom: 6,
-  },
-  itemLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  itemLocationPin: {
-    fontSize: 11,
-    marginRight: 4,
-  },
-  itemAddress: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    flex: 1,
-  },
-  // 日期分组头
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  sectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginRight: 10,
+  ribbonBar: { flex: 1, borderRadius: 2 },
+
+  sectionHead: {
+    flexDirection: 'row', alignItems: 'baseline',
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
+    fontFamily: 'Georgia', fontStyle: 'italic',
+    fontSize: 34, color: Colors.text, letterSpacing: -0.8, lineHeight: 36,
   },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-    marginHorizontal: 10,
+  sectionRule: {
+    flex: 1, height: 1, backgroundColor: Colors.border,
+    marginHorizontal: 10, marginBottom: 8,
   },
   sectionCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    fontFamily: 'Menlo', fontSize: 11, color: Colors.textSecondary,
+    letterSpacing: 1.5,
   },
-  // 空状态
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    padding: 40,
+
+  cardRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20 },
+  rail: { width: 52, paddingTop: 4, alignItems: 'flex-end', position: 'relative' },
+  railTime: {
+    fontFamily: 'Menlo', fontSize: 10,
+    color: Colors.textSecondary, letterSpacing: 1,
   },
-  emptyTimeline: {
-    alignItems: 'center',
-    marginBottom: 24,
-    height: 80,
-    justifyContent: 'space-around',
+  railDot: {
+    width: 18, height: 18, borderRadius: 9,
+    marginTop: 8, borderWidth: 3, borderColor: Colors.background,
   },
-  emptyTimelineLine: {
-    position: 'absolute',
-    width: 2,
-    height: '100%',
-    backgroundColor: Colors.border,
+  railLine: {
+    position: 'absolute', right: 8, top: 48, bottom: -12,
+    width: 1, backgroundColor: Colors.border,
   },
-  emptyTimelineDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.primary,
+  card: {
+    flex: 1, marginBottom: 12,
+    backgroundColor: Colors.card, borderRadius: 18, padding: 16,
+    borderWidth: 1, borderColor: Colors.border,
   },
+  cardHead: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 10,
+  },
+  moodTag: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 2,
+  },
+  place: { fontSize: 12, color: Colors.textSecondary },
+  rel: {
+    fontFamily: 'Menlo', fontSize: 10,
+    color: Colors.muted, marginTop: 2,
+  },
+  serifNote: {
+    fontFamily: 'Georgia', fontSize: 16,
+    lineHeight: 23, color: Colors.text, letterSpacing: -0.1,
+  },
+  photo: { width: '100%', aspectRatio: 16 / 10, borderRadius: 10, marginTop: 10 },
+
+  empty: { alignItems: 'center', padding: 60 },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 8,
+    fontFamily: 'Georgia', fontSize: 22,
+    fontStyle: 'italic', color: Colors.text, marginBottom: 6,
   },
   emptyHint: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
+    fontSize: 14, color: Colors.textSecondary, textAlign: 'center',
   },
 });

@@ -1,7 +1,8 @@
 import React, { useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
-import { MAPBOX_TOKEN, ILLUSTRATED_STYLE } from '../constants/mapbox';
+import { MAPBOX_TOKEN } from '../constants/mapbox';
+const ILLUSTRATED_STYLE = 'mapbox://styles/mapbox/streets-v12';
 import { Colors, MoodColors } from '../constants/colors';
 import { UserLocation, MoodType } from '../types';
 
